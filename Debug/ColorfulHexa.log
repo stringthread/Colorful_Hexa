@@ -1,0 +1,11 @@
+﻿  funcs.cpp
+c:\users\yuito\desktop\school\festival\2018\ennichi\musicgame\colorfulhexa\colorfulhexa\colorfulhexa.h(199): warning C4018: '>=': signed と unsigned の数値を比較しようとしました。
+c:\users\yuito\desktop\school\festival\2018\ennichi\musicgame\colorfulhexa\colorfulhexa\colorfulhexa.h(219): warning C4244: '=': 'float' から 'long' への変換です。データが失われる可能性があります。
+c:\users\yuito\desktop\school\festival\2018\ennichi\musicgame\colorfulhexa\colorfulhexa\colorfulhexa.h(226): warning C4018: '<=': signed と unsigned の数値を比較しようとしました。
+c:\users\yuito\desktop\school\festival\2018\ennichi\musicgame\colorfulhexa\colorfulhexa\funcs.cpp(167): warning C4018: '<': signed と unsigned の数値を比較しようとしました。
+c:\users\yuito\desktop\school\festival\2018\ennichi\musicgame\colorfulhexa\colorfulhexa\funcs.cpp(232): warning C4018: '<': signed と unsigned の数値を比較しようとしました。
+c:\users\yuito\desktop\school\festival\2018\ennichi\musicgame\colorfulhexa\colorfulhexa\funcs.cpp(334): warning C4018: '<=': signed と unsigned の数値を比較しようとしました。
+c:\users\yuito\desktop\school\festival\2018\ennichi\musicgame\colorfulhexa\colorfulhexa\funcs.cpp(337): warning C4018: '>=': signed と unsigned の数値を比較しようとしました。
+c:\users\yuito\desktop\school\festival\2018\ennichi\musicgame\colorfulhexa\colorfulhexa\funcs.cpp(350): warning C4018: '<': signed と unsigned の数値を比較しようとしました。
+c:\users\yuito\desktop\school\festival\2018\ennichi\musicgame\colorfulhexa\colorfulhexa\funcs.cpp(359): warning C4018: '<': signed と unsigned の数値を比較しようとしました。
+  ColorfulHexa.vcxproj -> C:\Users\yuito\Desktop\School\festival\2018\ennichi\musicgame\ColorfulHexa\Debug\ColorfulHexa.exe
