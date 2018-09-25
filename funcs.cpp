@@ -272,16 +272,15 @@ int BMS_Manager::load_music(SDL_Renderer *render){
 
 		for (unsigned i = 0; i < data.size(); i++) {
 			if (data[i] == "00")continue;
+			num_note++;
 			if (channel < 14) {
 				music[channel].emplace_back(data[i], bar_no, (long)(bar_count[(bar_no == 0) ? 0 : (bar_no - 1)] + i * (bar_count[bar_no] - bar_count[(bar_no == 0) ? 0 : (bar_no - 1)]) / data.size()));
-				num_note++;
 			}
 			//for normal notes
 
 			else {
 				if (ln_start.count(data[i]) == 1 && ln_start[data[i]] > 0) {//for end note
 					music[channel].emplace_back(data[i], start_bar_no[data[i]], ln_start[data[i]] , (long)(bar_count[bar_no - 1] + i * (bar_count[bar_no] - bar_count[bar_no - 1]) / data.size()));
-					num_note++;
 					ln_start[data[i]] = -1;
 				} else {//for start note
 					start_bar_no[data[i]] = bar_no;

@@ -280,6 +280,7 @@ int Gamemain::play(){
 						colorful_gauge += COL_GAUGE[3];
 						if (colorful_gauge < 0.0f)colorful_gauge = 0.0f;
 					}
+					if (notes[i][j].is_ln() && pushing_long[i - 1])pushing_long[i-1] = false;
 					bmsm.set_next_note(notes[i][j].is_ln() ? i + 13 : i + 7);
 				}
 				continue;
@@ -293,12 +294,21 @@ int Gamemain::play(){
 			if (i == 0)continue;
 			if (input[i-1] == 1) {
 				if (notes[i][j].pushed)continue;
-				if (notes[i][j].get_end_count() != -1)pushing_long[i - 1] = true;
+				if (notes[i][j].get_end_count() != -1) {
+					if(check_judge(notes[i][j].get_count()))pushing_long[i - 1] = true;
+				}
 				else if (check_judge(notes[i][j].get_count()))bmsm.set_pushed(i + 7, notes[i][j].get_index());
-			} else if (input[i - 1] == -1) {
+			} else if (input[i - 1] == -1 && pushing_long[i-1]) {
 				pushing_long[i - 1] = false;
-				if(notes[i][j].get_end_count()!=-1)check_judge(notes[i][j].get_end_count());
-				bmsm.set_pushed(i + 7, notes[i][j].get_index());
+				bmsm.set_pushed(i + 13, notes[i][j].get_index());
+				if (notes[i][j].get_end_count() != -1) {
+					if (!check_judge(notes[i][j].get_end_count())) {
+						combo = 0;
+						judge[3]++;
+						colorful_gauge += COL_GAUGE[3];
+						if (colorful_gauge < 0.0f)colorful_gauge = 0.0f;
+					}
+				}
 			}
 			break;
 		}
