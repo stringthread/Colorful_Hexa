@@ -129,7 +129,9 @@ bool Gamemain::check_judge(long count) {
 		else curr_timing = T_LATE;
 		//timing
 
-		if (i == 3)combo = 0;
+		if (i == 3) {
+			combo = 0;
+		}
 		else {
 			combo++;
 			if (combo > max_combo)max_combo = combo;
@@ -271,16 +273,15 @@ int Gamemain::play(){
 				bmsm.set_pushed(0, notes[i][j].get_index());
 			}
 			//bgm
-			long now_cnt = bmsm.time_to_count(play_time - R_GOOD * 1000 / FPS);
-			if (notes[i][j].get_count() < bmsm.time_to_count(play_time - R_GOOD * 1000 / FPS)) {
+			if (notes[i][j].get_count() < bmsm.time_to_count(play_time - R_GOOD * 1000 / FPS) && notes[i][j].get_end_count() < bmsm.time_to_count(play_time - R_GOOD * 1000 / FPS)) {
 				if (i != 0) {
 					if (!notes[i][j].pushed) {
 						combo = 0;
+						colorful_gauge += COL_GAUGE[3];
+						if (colorful_gauge < 0.0f)colorful_gauge = 0.0f;
 					}
-					colorful_gauge += COL_GAUGE[3];
-					if (colorful_gauge < 0.0f)colorful_gauge = 0.0f;
+					bmsm.set_next_note(notes[i][j].is_ln() ? i + 13 : i + 7);
 				}
-				if(notes[i][j].get_end_count()<bmsm.time_to_count(play_time - R_GOOD * 1000 / FPS))bmsm.set_next_note(notes[i][j].is_ln() ? i + 13 : i + 7);
 				continue;
 			}
 			if(notes[i][j].pushed&&notes[i][j].get_count() < bmsm.time_to_count(play_time)&& notes[i][j].get_end_count() < bmsm.time_to_count(play_time)) {
@@ -292,17 +293,12 @@ int Gamemain::play(){
 			if (i == 0)continue;
 			if (input[i-1] == 1) {
 				if (notes[i][j].pushed)continue;
-				if (notes[i][j].get_end_count() != -1)pushing_long[i-1] = true;
-
-				ch = Mix_GroupAvailable(i - 1);
-				if (ch == -1) {
-					ch = Mix_GroupOldest(i - 1);
-					if(Mix_Playing(ch)==1)Mix_HaltChannel(ch);
-				}
-				Mix_PlayChannel(ch,bmsm.get_wav(notes[i][j].get_data()),0);
-				//audio
-
-				if (check_judge(notes[i][j].get_count()))bmsm.set_pushed(i + 7, notes[i][j].get_index());
+				if (notes[i][j].get_end_count() != -1)pushing_long[i - 1] = true;
+				else if (check_judge(notes[i][j].get_count()))bmsm.set_pushed(i + 7, notes[i][j].get_index());
+			} else if (input[i - 1] == -1) {
+				pushing_long[i - 1] = false;
+				if(notes[i][j].get_end_count()!=-1)check_judge(notes[i][j].get_end_count());
+				bmsm.set_pushed(i + 7, notes[i][j].get_index());
 			}
 			break;
 		}

@@ -1,11 +1,20 @@
-﻿  funcs.cpp
+﻿  Gamemain.cpp
 c:\users\yuito\desktop\school\festival\2018\ennichi\musicgame\colorfulhexa\colorfulhexa\colorfulhexa.h(199): warning C4018: '>=': signed と unsigned の数値を比較しようとしました。
 c:\users\yuito\desktop\school\festival\2018\ennichi\musicgame\colorfulhexa\colorfulhexa\colorfulhexa.h(219): warning C4244: '=': 'float' から 'long' への変換です。データが失われる可能性があります。
 c:\users\yuito\desktop\school\festival\2018\ennichi\musicgame\colorfulhexa\colorfulhexa\colorfulhexa.h(226): warning C4018: '<=': signed と unsigned の数値を比較しようとしました。
-c:\users\yuito\desktop\school\festival\2018\ennichi\musicgame\colorfulhexa\colorfulhexa\funcs.cpp(167): warning C4018: '<': signed と unsigned の数値を比較しようとしました。
-c:\users\yuito\desktop\school\festival\2018\ennichi\musicgame\colorfulhexa\colorfulhexa\funcs.cpp(232): warning C4018: '<': signed と unsigned の数値を比較しようとしました。
-c:\users\yuito\desktop\school\festival\2018\ennichi\musicgame\colorfulhexa\colorfulhexa\funcs.cpp(334): warning C4018: '<=': signed と unsigned の数値を比較しようとしました。
-c:\users\yuito\desktop\school\festival\2018\ennichi\musicgame\colorfulhexa\colorfulhexa\funcs.cpp(337): warning C4018: '>=': signed と unsigned の数値を比較しようとしました。
-c:\users\yuito\desktop\school\festival\2018\ennichi\musicgame\colorfulhexa\colorfulhexa\funcs.cpp(350): warning C4018: '<': signed と unsigned の数値を比較しようとしました。
-c:\users\yuito\desktop\school\festival\2018\ennichi\musicgame\colorfulhexa\colorfulhexa\funcs.cpp(359): warning C4018: '<': signed と unsigned の数値を比較しようとしました。
+c:\users\yuito\desktop\school\festival\2018\ennichi\musicgame\colorfulhexa\colorfulhexa\gamemain.cpp(72): warning C4244: '=': 'float' から 'int' への変換です。データが失われる可能性があります。
+c:\users\yuito\desktop\school\festival\2018\ennichi\musicgame\colorfulhexa\colorfulhexa\gamemain.cpp(73): warning C4244: '=': 'float' から 'int' への変換です。データが失われる可能性があります。
+c:\users\yuito\desktop\school\festival\2018\ennichi\musicgame\colorfulhexa\colorfulhexa\gamemain.cpp(74): warning C4244: '=': 'float' から 'int' への変換です。データが失われる可能性があります。
+c:\users\yuito\desktop\school\festival\2018\ennichi\musicgame\colorfulhexa\colorfulhexa\gamemain.cpp(75): warning C4244: '=': 'float' から 'int' への変換です。データが失われる可能性があります。
+c:\users\yuito\desktop\school\festival\2018\ennichi\musicgame\colorfulhexa\colorfulhexa\gamemain.cpp(81): warning C4244: '=': 'float' から 'int' への変換です。データが失われる可能性があります。
+c:\users\yuito\desktop\school\festival\2018\ennichi\musicgame\colorfulhexa\colorfulhexa\gamemain.cpp(82): warning C4244: '=': 'float' から 'int' への変換です。データが失われる可能性があります。
+c:\users\yuito\desktop\school\festival\2018\ennichi\musicgame\colorfulhexa\colorfulhexa\gamemain.cpp(88): warning C4244: '=': 'float' から 'int' への変換です。データが失われる可能性があります。
+c:\users\yuito\desktop\school\festival\2018\ennichi\musicgame\colorfulhexa\colorfulhexa\gamemain.cpp(89): warning C4244: '=': 'float' から 'int' への変換です。データが失われる可能性があります。
+c:\users\yuito\desktop\school\festival\2018\ennichi\musicgame\colorfulhexa\colorfulhexa\gamemain.cpp(90): warning C4244: '=': 'float' から 'int' への変換です。データが失われる可能性があります。
+c:\users\yuito\desktop\school\festival\2018\ennichi\musicgame\colorfulhexa\colorfulhexa\gamemain.cpp(91): warning C4244: '=': 'float' から 'int' への変換です。データが失われる可能性があります。
+c:\users\yuito\desktop\school\festival\2018\ennichi\musicgame\colorfulhexa\colorfulhexa\gamemain.cpp(105): warning C4244: '=': 'float' から 'int' への変換です。データが失われる可能性があります。
+c:\users\yuito\desktop\school\festival\2018\ennichi\musicgame\colorfulhexa\colorfulhexa\gamemain.cpp(260): warning C4018: '<': signed と unsigned の数値を比較しようとしました。
+c:\users\yuito\desktop\school\festival\2018\ennichi\musicgame\colorfulhexa\colorfulhexa\gamemain.cpp(317): warning C4018: '<': signed と unsigned の数値を比較しようとしました。
+c:\users\yuito\desktop\school\festival\2018\ennichi\musicgame\colorfulhexa\colorfulhexa\gamemain.cpp(363): warning C4244: '=': 'float' から 'int' への変換です。データが失われる可能性があります。
+c:\users\yuito\desktop\school\festival\2018\ennichi\musicgame\colorfulhexa\colorfulhexa\gamemain.cpp(365): warning C4244: '=': 'float' から 'int' への変換です。データが失われる可能性があります。
   ColorfulHexa.vcxproj -> C:\Users\yuito\Desktop\School\festival\2018\ennichi\musicgame\ColorfulHexa\Debug\ColorfulHexa.exe

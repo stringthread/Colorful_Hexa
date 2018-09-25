@@ -333,7 +333,7 @@ void BMS_Manager::get_notes(vector<BMS_Manager::ENote> en[],long time) {
 		if(i<7)en[i].clear();
 		if (music[(i==0)?0:i+7].size() <= next_note[(i==0)?0:i+7])continue;
 		for (int j = next_note[(i==0)?0:i+7];music[(i==0)?0:i+7][j].get_count()<time_to_count(time + time_draw_start); j++) {
-			en[(i<7)?i:i-7].emplace_back(music[(i==0)?0:i + 7][j], j);
+			en[(i<7)?i:i-6].emplace_back(music[(i==0)?0:i + 7][j], j);
 			if (j >= music[(i==0)?0:i+7].size()-1)break;
 		}
 	}
