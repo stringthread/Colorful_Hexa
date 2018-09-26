@@ -23,6 +23,7 @@ void Gamemain::change_mode() {
 			break;
 		case M_PLAY:mode = M_RESULT; break;
 		case M_RESULT:
+			Mix_HaltChannel(-1);
 			bmsm.reset();
 			qr.reset();
 			pushing_long.fill(0);
@@ -67,8 +68,8 @@ void Gamemain::draw_note(long count,int lane,int color,long end_count){
 
 	if (end_count > 0) {
 		SDL_SetRenderDrawColor(render, 0, 255, 0, 16);
-		dis_note1 = (0.3f + 0.7f*max(count - bmsm.time_to_count(play_time), 0) / (bmsm.time_to_count(play_time + bmsm.time_draw_start) - bmsm.time_to_count(play_time)))*scr_h / 2;
-		dis_note2 = min(0.3f + 0.7f*(end_count - bmsm.time_to_count(play_time)) / (bmsm.time_to_count(play_time + bmsm.time_draw_start) - bmsm.time_to_count(play_time) - NOTE_W), 1)*scr_h / 2;
+		dis_note1 = ((0.3f + 0.7f*max(count - bmsm.time_to_count(play_time), 0) / (bmsm.time_to_count(play_time + bmsm.time_draw_start) - bmsm.time_to_count(play_time))) / 2 + NOTE_W)*scr_h;
+		dis_note2 = min(0.3f + 0.7f*(end_count - bmsm.time_to_count(play_time)) / (bmsm.time_to_count(play_time + bmsm.time_draw_start) - bmsm.time_to_count(play_time)), 1)*scr_h / 2;
 		rect_note.h = (dis_note2 - dis_note1)*sin(pi/3)+1;
 		rect_note.w = rect_note.h*size_ln[0];
 		rect_note.x = scr_w / 2 + sin(pi*lane / 3)*dis_note1-rect_note.w;
@@ -98,8 +99,8 @@ void Gamemain::draw_note(long count,int lane,int color,long end_count){
 		return;
 	}
 	
-	dis_note1 = ((0.3f + 0.7f*(count - bmsm.time_to_count(play_time)) / (bmsm.time_to_count(play_time + bmsm.time_draw_start) - bmsm.time_to_count(play_time)))/2+NOTE_W)*scr_h;
-	dis_note2 = (0.3f + 0.7f*(count - bmsm.time_to_count(play_time)) / (bmsm.time_to_count(play_time + bmsm.time_draw_start) - bmsm.time_to_count(play_time))) / 2*scr_h;
+	dis_note1 = (0.3f + 0.7f*(count - bmsm.time_to_count(play_time)) / (bmsm.time_to_count(play_time + bmsm.time_draw_start) - bmsm.time_to_count(play_time))) / 2 * scr_h;
+	dis_note2 = ((0.3f + 0.7f*(count - bmsm.time_to_count(play_time)) / (bmsm.time_to_count(play_time + bmsm.time_draw_start) - bmsm.time_to_count(play_time))) / 2 + NOTE_W)*scr_h;
 
 	rect_note.w = int(sin(pi / 3)*dis_note2);
 	rect_note.h = abs(dis_note2 - int(cos(pi/3)*dis_note1));
