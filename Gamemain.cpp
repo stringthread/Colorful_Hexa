@@ -63,51 +63,51 @@ void Gamemain::calc_score() {
 void Gamemain::draw_note(long count,int lane,int color,long end_count){
 	if (lane < 0 || lane >= 6)return;
 
-	float dis_note1,dis_note2;
+	float dis_note_in,dis_note_out;
 	if (count < bmsm.time_to_count(play_time) && end_count < bmsm.time_to_count(play_time))return;
 
 	if (end_count > 0) {
-		SDL_SetRenderDrawColor(render, 0, 255, 0, 16);
-		dis_note1 = ((0.3f + 0.7f*max(count - bmsm.time_to_count(play_time), 0) / (bmsm.time_to_count(play_time + bmsm.time_draw_start) - bmsm.time_to_count(play_time))) / 2 + NOTE_W)*scr_h;
-		dis_note2 = min(0.3f + 0.7f*(end_count - bmsm.time_to_count(play_time)) / (bmsm.time_to_count(play_time + bmsm.time_draw_start) - bmsm.time_to_count(play_time)), 1)*scr_h / 2;
-		rect_note.h = (dis_note2 - dis_note1)*sin(pi/3)+1;
+		dis_note_in = (0.3f + 0.7f*max(count - bmsm.time_to_count(play_time), 0) / (bmsm.time_to_count(play_time + bmsm.time_draw_start) - bmsm.time_to_count(play_time)))*scr_h/2;
+		dis_note_out = (min(0.3f + 0.7f*(end_count - bmsm.time_to_count(play_time)) / (bmsm.time_to_count(play_time + bmsm.time_draw_start) - bmsm.time_to_count(play_time)), 1)/2+NOTE_W)*scr_h;
+		rect_note.h = (dis_note_out - dis_note_in)*sin(pi/3)+1;
 		rect_note.w = rect_note.h*size_ln[0];
-		rect_note.x = scr_w / 2 + sin(pi*lane / 3)*dis_note1-rect_note.w;
-		rect_note.y = scr_h / 2 - cos(pi*lane / 3)*dis_note1-rect_note.h;
+		rect_note.x = scr_w / 2 + sin(pi*lane / 3)*dis_note_in-rect_note.w;
+		rect_note.y = scr_h / 2 - cos(pi*lane / 3)*dis_note_in-rect_note.h;
 		center.x = rect_note.w;
 		center.y = rect_note.h;
 		SDL_RenderCopyEx(render, ln[color][0], NULL, &rect_note, 60 * (lane+0.5f), &center, SDL_FLIP_NONE);
 		//first triangle
 
-		rect_note.x = scr_w / 2 + sin(pi*(lane+1) / 3)*dis_note1;
-		rect_note.y = scr_h / 2 - cos(pi*(lane+1) / 3)*dis_note1 - rect_note.h;
+		rect_note.x = scr_w / 2 + sin(pi*(lane+1) / 3)*dis_note_in;
+		rect_note.y = scr_h / 2 - cos(pi*(lane+1) / 3)*dis_note_in - rect_note.h;
 		center.x = 0;
 		center.y = rect_note.h;
-		SDL_RenderCopyEx(render, ln[color][2], NULL, &rect_note, 60 * (lane+0.5f), &center, SDL_FLIP_NONE);
+		SDL_RenderCopyEx(render, ln[color][0], NULL, &rect_note, 60 * (lane+0.5f), &center, SDL_FLIP_HORIZONTAL);
 		//second triangle
 
-		rect_note.w = dis_note1+1;
-		rect_note.h = (dis_note2 - dis_note1)*sin(pi / 3);
-		rect_note.x = scr_w / 2 + sin(pi*lane / 3)*dis_note1;
-		rect_note.y = scr_h / 2 - cos(pi*lane / 3)*dis_note1 - rect_note.h;
+		rect_note.w = dis_note_in+1;
+		rect_note.h = (dis_note_out - dis_note_in)*sin(pi / 3);
+		rect_note.x = scr_w / 2 + sin(pi*lane / 3)*dis_note_in;
+		rect_note.y = scr_h / 2 - cos(pi*lane / 3)*dis_note_in - rect_note.h;
 		center.y = rect_note.h;
 		SDL_RenderCopyEx(render, ln[color][1], NULL, &rect_note, 60 * (lane+0.5f), &center, SDL_FLIP_NONE);
 		//center rect
+		//SDL_RenderDrawRect(render, &rect_note);
 
 		if(count>bmsm.time_to_count(play_time))draw_note(count, lane, 6);
 		if (end_count < bmsm.time_to_count(play_time + bmsm.time_draw_start))draw_note(end_count, lane, 6);
 		return;
 	}
 	
-	dis_note1 = (0.3f + 0.7f*(count - bmsm.time_to_count(play_time)) / (bmsm.time_to_count(play_time + bmsm.time_draw_start) - bmsm.time_to_count(play_time))) / 2 * scr_h;
-	dis_note2 = ((0.3f + 0.7f*(count - bmsm.time_to_count(play_time)) / (bmsm.time_to_count(play_time + bmsm.time_draw_start) - bmsm.time_to_count(play_time))) / 2 + NOTE_W)*scr_h;
+	dis_note_in = (0.3f + 0.7f*(count - bmsm.time_to_count(play_time)) / (bmsm.time_to_count(play_time + bmsm.time_draw_start) - bmsm.time_to_count(play_time))) / 2 * scr_h;
+	dis_note_out = ((0.3f + 0.7f*(count - bmsm.time_to_count(play_time)) / (bmsm.time_to_count(play_time + bmsm.time_draw_start) - bmsm.time_to_count(play_time))) / 2 + NOTE_W)*scr_h;
 
-	rect_note.w = int(sin(pi / 3)*dis_note2);
-	rect_note.h = abs(dis_note2 - int(cos(pi/3)*dis_note1));
-	rect_note.x = scr_w/2+int(sin((lane + 0.5f)*pi / 3)*(dis_note1 + dis_note2) / 2)-rect_note.w/2;
-	rect_note.y = scr_h/2-int(cos((lane + 0.5f)*pi / 3)*(dis_note1 + dis_note2) / 2)-rect_note.h/2;
+	rect_note.w = int(sin(pi / 3)*dis_note_out);
+	rect_note.h = abs(dis_note_out - int(cos(pi/3)*dis_note_in));
+	rect_note.x = scr_w/2+int(sin(lane*pi / 3)*dis_note_out);
+	rect_note.y = scr_h/2-int(cos(lane*pi / 3)*dis_note_out);
 
-	SDL_RenderCopyEx(render, note[color], NULL, &rect_note, 60 * lane, NULL, SDL_FLIP_NONE);
+	SDL_RenderCopyEx(render, note[color], NULL, &rect_note, 60 * lane, &lt, SDL_FLIP_NONE);
 }
 
 bool Gamemain::check_judge(long count) {
@@ -390,7 +390,7 @@ void Gamemain::init(){
 		tmp = IMG_Load((string(curr_dir) + "\\image\\n_" + to_string(i) + ".png").c_str());
 		note[i] = SDL_CreateTextureFromSurface(render, tmp);
 		SDL_FreeSurface(tmp);
-		for (int j = 0; j < 3; j++) {
+		for (int j = 0; j < 2; j++) {
 			tmp = IMG_Load((string(curr_dir) + "\\image\\ln_" + to_string(i) + "_" + to_string(j) + ".png").c_str());
 			ln[i][j] = SDL_CreateTextureFromSurface(render, tmp);
 			SDL_FreeSurface(tmp);

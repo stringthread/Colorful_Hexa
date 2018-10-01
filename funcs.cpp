@@ -262,13 +262,16 @@ int BMS_Manager::load_music(SDL_Renderer *render){
 
 		string tmp_data = line.substr(7);
 		data.clear();
-		while (tmp_data.length() > 2) {
-			data.push_back(tmp_data.substr(0, 2));
-			tmp_data = tmp_data.substr(2);
+		if (channel == 2)data.push_back(tmp_data);
+		else {
+			while (tmp_data.length() > 2) {
+				data.push_back(tmp_data.substr(0, 2));
+				tmp_data = tmp_data.substr(2);
+			}
+			data.push_back(tmp_data);
+			tmp_data = "";
+			//split data into unit (2 digits)
 		}
-		data.push_back(tmp_data);
-		tmp_data = "";
-		//split data into unit (2 digits)
 
 		for (unsigned i = 0; i < data.size(); i++) {
 			if (data[i] == "00")continue;
@@ -280,7 +283,7 @@ int BMS_Manager::load_music(SDL_Renderer *render){
 
 			else {
 				if (ln_start.count(data[i]) == 1 && ln_start[data[i]] > 0) {//for end note
-					music[channel].emplace_back(data[i], start_bar_no[data[i]], ln_start[data[i]] , (long)(bar_count[bar_no - 1] + i * (bar_count[bar_no] - bar_count[bar_no - 1]) / data.size()));
+					music[channel].emplace_back(data[i], start_bar_no[data[i]], ln_start[data[i]] , (long)(bar_count[bar_no-1] + i * (bar_count[bar_no] - bar_count[bar_no-1]) / data.size()));
 					ln_start[data[i]] = -1;
 				} else {//for start note
 					start_bar_no[data[i]] = bar_no;
@@ -348,7 +351,7 @@ void BMS_Manager::set_time_bpm_change() {
 	long time = 0l;
 	for (int i=1;i<music[2].size();i++){
 		time = time_bpm_change[i - 1];
-		time += (music[2][i].get_count() - music[2][i - 1].get_count())/BAR_STANDARD*4/stol(music[2][i].get_data(),NULL,16)*60;
+		time += (music[2][i].get_count() - music[2][i - 1].get_count())/BAR_STANDARD*4/stol(music[2][i].get_data(),NULL,16)*60000;
 		time_bpm_change.push_back(time);
 	}
 	return;
