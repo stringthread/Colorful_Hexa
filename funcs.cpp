@@ -213,7 +213,7 @@ int BMS_Manager::load_music(SDL_Renderer *render){
 	string line;
 	int bar_no,channel;
 	vector<string> data;
-	unordered_map<string, long> ln_start, start_bar_no;
+	array<long,6> ln_start, start_bar_no;
 	if (ifs.fail()) {
 		error = -1;
 		goto ending;
@@ -275,19 +275,20 @@ int BMS_Manager::load_music(SDL_Renderer *render){
 
 		for (unsigned i = 0; i < data.size(); i++) {
 			if (data[i] == "00")continue;
-			num_note++;
 			if (channel < 14) {
 				music[channel].emplace_back(data[i], bar_no, (long)(bar_count[(bar_no == 0) ? 0 : (bar_no - 1)] + i * (bar_count[bar_no] - bar_count[(bar_no == 0) ? 0 : (bar_no - 1)]) / data.size()));
+				num_note++;
 			}
 			//for normal notes
 
 			else {
-				if (ln_start.count(data[i]) == 1 && ln_start[data[i]] > 0) {//for end note
-					music[channel].emplace_back(data[i], start_bar_no[data[i]], ln_start[data[i]] , (long)(bar_count[bar_no-1] + i * (bar_count[bar_no] - bar_count[bar_no-1]) / data.size()));
-					ln_start[data[i]] = -1;
+				if (ln_start[channel - 14] > 0) {//for end note
+					music[channel].emplace_back(data[i], start_bar_no[channel-14], ln_start[channel - 14] , (long)(bar_count[bar_no-1] + i * (bar_count[bar_no] - bar_count[bar_no-1]) / data.size()));
+					ln_start[channel - 14] = -1;
 				} else {//for start note
-					start_bar_no[data[i]] = bar_no;
-					ln_start[data[i]] = (long)(bar_count[bar_no - 1] + i * (bar_count[bar_no] - bar_count[bar_no - 1]) / data.size());
+					start_bar_no[channel - 14] = bar_no;
+					ln_start[channel - 14] = (long)(bar_count[bar_no - 1] + i * (bar_count[bar_no] - bar_count[bar_no - 1]) / data.size());
+					num_note++;
 				}
 			}
 			//for long notes

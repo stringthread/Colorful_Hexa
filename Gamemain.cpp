@@ -110,7 +110,7 @@ void Gamemain::draw_note(long count,int lane,int color,long end_count){
 	SDL_RenderCopyEx(render, note[color], NULL, &rect_note, 60 * lane, &lt, SDL_FLIP_NONE);
 }
 
-bool Gamemain::check_judge(long count) {
+bool Gamemain::check_judge(long count,bool add_judge) {
 	long now_count = bmsm.time_to_count(play_time);
 	long judge_count[4] = {
 		bmsm.time_to_count(play_time + R_PERFECT * 1000 / FPS) - now_count,
@@ -119,13 +119,15 @@ bool Gamemain::check_judge(long count) {
 		bmsm.time_to_count(play_time + R_MISS * 1000 / FPS) - now_count,
 	};
 	long dis_count = abs(count - now_count);
+	curr_timing=T_NONE;
 	for (int i= 0; i < 4; i++) {
 		if (dis_count > judge_count[i])continue;
+		if (!add_judge)return i!=3;
 		judge[i]++;
 		curr_judge = i;
 		//judgement
 
-		if (i == 0)curr_timing = T_NONE;
+		if (i == 0)curr_timing = T_JUST;
 		else if (count > now_count)curr_timing = T_FAST;
 		else curr_timing = T_LATE;
 		//timing
@@ -280,6 +282,8 @@ int Gamemain::play(){
 						combo = 0;
 						colorful_gauge += COL_GAUGE[3];
 						if (colorful_gauge < 0.0f)colorful_gauge = 0.0f;
+						curr_judge = 3;
+						curr_timing = T_LATE;
 					}
 					if (notes[i][j].is_ln() && pushing_long[i - 1])pushing_long[i-1] = false;
 					bmsm.set_next_note(notes[i][j].is_ln() ? i + 13 : i + 7);
@@ -303,7 +307,7 @@ int Gamemain::play(){
 				pushing_long[i - 1] = false;
 				bmsm.set_pushed(i + 13, notes[i][j].get_index());
 				if (notes[i][j].get_end_count() != -1) {
-					if (!check_judge(notes[i][j].get_end_count())) {
+					if (!check_judge(notes[i][j].get_end_count(),false)) {
 						combo = 0;
 						judge[3]++;
 						colorful_gauge += COL_GAUGE[3];
@@ -330,6 +334,10 @@ int Gamemain::play(){
 		}
 		SDL_RenderCopy(render,(input[i] > 0) ? btn_p[i] : btn[i], NULL,  &rect_btn[i]);
 	}
+
+	if (curr_judge >= 0)SDL_RenderCopy(render, letter_judge[curr_judge], NULL, &rect_judge);
+	if (curr_timing >= 0)SDL_RenderCopy(render, letter_timing[curr_timing], NULL, &rect_timing);
+
 	s_letter = TTF_RenderUTF8_Blended(font, digit((int)score, 6).c_str(), f_color);
 	letter = SDL_CreateTextureFromSurface(render, s_letter);
 	SDL_FreeSurface(s_letter);
@@ -404,6 +412,39 @@ void Gamemain::init(){
 	tmp = IMG_Load((string(curr_dir) + "\\image\\ln_end.png").c_str());
 	note[6] = SDL_CreateTextureFromSurface(render, tmp);
 	SDL_FreeSurface(tmp);
+
+	tmp = IMG_Load((string(curr_dir) + "\\image\\Perfect.png").c_str());
+	letter_judge[0] = SDL_CreateTextureFromSurface(render, tmp);
+	SDL_FreeSurface(tmp);
+	tmp = IMG_Load((string(curr_dir) + "\\image\\Great.png").c_str());
+	letter_judge[1] = SDL_CreateTextureFromSurface(render, tmp);
+	SDL_FreeSurface(tmp);
+	tmp = IMG_Load((string(curr_dir) + "\\image\\Good.png").c_str());
+	letter_judge[2] = SDL_CreateTextureFromSurface(render, tmp);
+	SDL_FreeSurface(tmp);
+	tmp = IMG_Load((string(curr_dir) + "\\image\\Miss.png").c_str());
+	letter_judge[3] = SDL_CreateTextureFromSurface(render, tmp);
+	SDL_FreeSurface(tmp);
+	rect_judge.x = int(scr_w*0.4f);
+	rect_judge.w = int(scr_w*0.2f);
+	SDL_QueryTexture(letter_judge[0], NULL, NULL, &tex_w, &tex_h);
+	rect_judge.h = rect_judge.w*tex_h / tex_w;
+	rect_judge.y = scr_h / 2 - rect_judge.h;
+
+	tmp = IMG_Load((string(curr_dir) + "\\image\\Just.png").c_str());
+	letter_timing[0] = SDL_CreateTextureFromSurface(render, tmp);
+	SDL_FreeSurface(tmp);
+	tmp = IMG_Load((string(curr_dir) + "\\image\\Fast.png").c_str());
+	letter_timing[1] = SDL_CreateTextureFromSurface(render, tmp);
+	SDL_FreeSurface(tmp);
+	tmp = IMG_Load((string(curr_dir) + "\\image\\Late.png").c_str());
+	letter_timing[2] = SDL_CreateTextureFromSurface(render, tmp);
+	SDL_FreeSurface(tmp);
+	rect_timing.x = int(scr_w*0.4f);
+	rect_timing.w = int(scr_w*0.2f);
+	SDL_QueryTexture(letter_timing[0], NULL, NULL, &tex_w, &tex_h);
+	rect_timing.h = rect_timing.w*tex_h / tex_w;
+	rect_timing.y = scr_h / 2;
 	//image
 
 
@@ -480,6 +521,8 @@ void Gamemain::close(){
 		SDL_DestroyTexture(btn[i]);
 		SDL_DestroyTexture(btn_p[i]);
 	}
+	for (int i = 0; i < 4; i++)SDL_DestroyTexture(letter_judge[i]);
+	for (int i = 0; i < 3; i++)SDL_DestroyTexture(letter_timing[i]);
 	bmsm.reset();
 	qr.close();
 	TTF_CloseFont(font);
