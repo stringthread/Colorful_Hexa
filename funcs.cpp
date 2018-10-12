@@ -213,6 +213,7 @@ int BMS_Manager::load_music(SDL_Renderer *render){
 	ifstream ifs(file);
 	string line;
 	int bar_no,channel;
+	int curr_bar_count;
 	vector<string> data;
 	array<long,6> ln_start, start_bar_no;
 	if (ifs.fail()) {
@@ -220,9 +221,10 @@ int BMS_Manager::load_music(SDL_Renderer *render){
 		goto ending;
 	}
 
-	bar_count = vector<long>(header[sel].bar_num[lv], stoi(header[sel].bpm[lv])/130 * BAR_STANDARD);
+	bar_count = vector<long>(header[sel].bar_num[lv]+3, -1);
+	curr_bar_count = stoi(header[sel].bpm[lv]) / 130 * BAR_STANDARD;
 	music[2].emplace_back(header[sel].bpm[lv],0, 0l);
-	bar_count.push_back(0l);
+	bar_count[0]=0l;
 	//set initial data
 
 	while (getline(ifs, line)) {
@@ -230,7 +232,10 @@ int BMS_Manager::load_music(SDL_Renderer *render){
 		if (!regex_search(line, regex("^#[0-9]{3}02:[0-9].?[0-9]+$")))continue;
 		bar_count[stoi(line.substr(1, 3))] = long(stof(line.substr(7))*float(BAR_STANDARD));
 	}
-	for (int i= 1; i < bar_count.size(); i++)bar_count[i] += bar_count[i - 1];
+	for (int i = 1; i < bar_count.size(); i++) {
+		if (bar_count[i] > 0)curr_bar_count = bar_count[i];
+		bar_count[i] =bar_count[i-1]+curr_bar_count;
+	}
 	//get bar frame
 
 	ifs.clear();
