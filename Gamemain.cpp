@@ -53,10 +53,11 @@ void Gamemain::calc_score() {
 	}
 	*///no color back
 	///*
-	if(colorful_gauge>=6.0f){
-	colorful_gauge=5.999f;
-	}
 	colors = (int)colorful_gauge;
+	if(colorful_gauge>=6.0f){
+	colorful_gauge=6.0f;
+	colors = 5;
+	}
 	//*///color back
 }
 
@@ -262,7 +263,7 @@ int Gamemain::play(){
 		if (notes[i].size() == 0)continue;
 		for (int j = 0; j < notes[i].size(); j++) {
 			if (i == 0 && !notes[i][j].pushed) {
-				if(bmsm.time_to_count(play_time)<2*bmsm.BAR_STANDARD){
+				if(bmsm.time_to_count(play_time/*-120l*/)<2*bmsm.BAR_STANDARD){
 					ch = Mix_GroupAvailable(7);
 					if (ch != -1)goto play;
 				}
@@ -323,8 +324,10 @@ int Gamemain::play(){
 	//calculation
 
 	SDL_SetRenderDrawColor(render, COLOR_HEX[colors][0], COLOR_HEX[colors][1], COLOR_HEX[colors][2], SDL_ALPHA_OPAQUE);
+	bg_1.draw();
+	bg_2.draw();
 	//rect_col.h = (int)(1.732f/3*2*rect_col.w*colorful_gauge);//no color back
-	rect_col.h = (int)(1.732f / 3 * 2*rect_col.w*(colorful_gauge-(int)colorful_gauge));//color back
+	rect_col.h = (int)(1.732f / 3 * 2*rect_col.w*(colorful_gauge-colors));//color back
 	rect_col.y = scr_h / 2 + (int)(1.732f/3*rect_col.w) - rect_col.h;
 	SDL_RenderFillRect(render,&rect_col);
 
@@ -333,6 +336,7 @@ int Gamemain::play(){
 			draw_note(notes[i+1][j].get_count(),i,colors,notes[i+1][j].get_end_count());
 		}
 		SDL_RenderCopy(render,(input[i] > 0) ? btn_p[i] : btn[i], NULL,  &rect_btn[i]);
+		if(colorful_gauge>=i+1)SDL_RenderCopy(render, btn_col[i], NULL, &rect_btn[i]);
 	}
 
 	if (curr_judge >= 0)SDL_RenderCopy(render, letter_judge[curr_judge], NULL, &rect_judge);
@@ -395,6 +399,9 @@ void Gamemain::init(){
 		tmp = IMG_Load((string(curr_dir) + "\\image\\btn_p_" + to_string(i)+".png").c_str());
 		btn_p[i] = SDL_CreateTextureFromSurface(render, tmp);
 		SDL_FreeSurface(tmp);
+		tmp = IMG_Load((string(curr_dir) + "\\image\\btn_col_" + to_string(i) + ".png").c_str());
+		btn_col[i] = SDL_CreateTextureFromSurface(render, tmp);
+		SDL_FreeSurface(tmp);
 		tmp = IMG_Load((string(curr_dir) + "\\image\\n_" + to_string(i) + ".png").c_str());
 		note[i] = SDL_CreateTextureFromSurface(render, tmp);
 		SDL_FreeSurface(tmp);
@@ -430,6 +437,8 @@ void Gamemain::init(){
 	SDL_QueryTexture(letter_judge[0], NULL, NULL, &tex_w, &tex_h);
 	rect_judge.h = rect_judge.w*tex_h / tex_w;
 	rect_judge.y = scr_h / 2 - rect_judge.h;
+	bg_1.init(render, (string(curr_dir) + "\\image\\bg_1.png").c_str());
+	bg_2.init(render, (string(curr_dir) + "\\image\\bg_2.png").c_str());
 
 	tmp = IMG_Load((string(curr_dir) + "\\image\\Just.png").c_str());
 	letter_timing[0] = SDL_CreateTextureFromSurface(render, tmp);

@@ -54,19 +54,20 @@ BMS_Manager::BMS_Manager(SDL_Renderer* render) {
 		HANDLE h_dir, h_file;
 		WIN32_FIND_DATA dir_data, file_data;
 		char curr_dir[256] = {};
-		string dir_path;
+		string dir_path,root_dir;
 		string wildcards[] = { "*.bms","*.bme","*.bml" };
 		bool is_first;
 		GetModuleFileName(NULL, &curr_dir[0], 256);
-		char_traits<char>::copy(curr_dir, regex_replace(curr_dir, regex("\\\\[^\\\\]+$"), "").c_str(), 256);
-		h_dir = FindFirstFile((string(curr_dir) + "\\data\\*").c_str(), &dir_data);
+		root_dir = regex_replace(curr_dir, regex("\\\\[^\\\\]+$"), "");
+		//char_traits<char>::copy(curr_dir, regex_replace(curr_dir, regex("\\\\[^\\\\]+$"), "").c_str(), 256);
+		h_dir = FindFirstFile((root_dir + "\\data\\*").c_str(), &dir_data);
 		if (h_dir == INVALID_HANDLE_VALUE) {
 			if (GetLastError() != ERROR_NO_MORE_FILES)error = -1;
 		}
 		while (error == 0) {
 			if (string(dir_data.cFileName).compare(".") != 0 && string(dir_data.cFileName).compare("..") != 0) {
 				is_first = true;
-				dir_path = string(curr_dir) + "\\data\\" + dir_data.cFileName + "\\";
+				dir_path = root_dir + "\\data\\" + dir_data.cFileName + "\\";
 				for (int i = 0; i < 3; i++) {
 					error = 0;
 					h_file = FindFirstFile((dir_path + wildcards[i]).c_str(), &file_data);
@@ -241,14 +242,13 @@ int BMS_Manager::load_music(SDL_Renderer *render){
 			bmp[line.substr(4,2)]=SDL_CreateTextureFromSurface(render,IMG_Load(regex_replace(line, regex("#BMP[0-9]{2}[ \t]+"), "").c_str()));
 		}
 		if (regex_search(line, regex("^#WAV[0-9]{2}"))) {
-			string test = regex_replace(line, regex("#WAV[0-9]{2}[ \t]+"), "").c_str();
 			wav[line.substr(4, 2)] = Mix_LoadWAV((header[sel].dir+regex_replace(line, regex("#WAV[0-9]{2}[ \t]+"), "")).c_str());
 		}
 		if (regex_search(line, regex("^#BPM[0-9]{2}"))) {
 			bpm[line.substr(4, 2)] = stoi(regex_replace(line, regex("#BPM[0-9]{2}[ \t]+"), ""));
 		}
 
-		line = regex_replace(line, regex("[ \t]+"), ""); regex_replace(line, regex("#WAV[0-9]{2}[ \t]+"), "").c_str();
+		line = regex_replace(line, regex("[ \t]+"), "");
 		if (!regex_search(line,regex("^#[0-9]{5}:[0-9A-F]+$")))continue;
 
 		bar_no = stoi(line.substr(1, 3));
@@ -335,7 +335,7 @@ void BMS_Manager::get_notes(vector<BMS_Manager::ENote> en[],long time) {
 	for (int i= 0; i < 13; i++) {
 		if(i<7)en[i].clear();
 		if (music[(i==0)?0:i+7].size() <= next_note[(i==0)?0:i+7])continue;
-		for (int j = next_note[(i==0)?0:i+7];music[(i==0)?0:i+7][j].get_count()<time_to_count(time + time_draw_start); j++) {
+		for (int j = next_note[(i==0)?0:i+7];music[(i==0)?0:i+7][j].get_count()<time_to_count(time + time_draw_start/*-((i==0)?120l:0)*/); j++) {
 			en[(i<7)?i:i-6].emplace_back(music[(i==0)?0:i + 7][j], j);
 			if (j >= music[(i==0)?0:i+7].size()-1)break;
 		}
