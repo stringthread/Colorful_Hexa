@@ -111,7 +111,7 @@ void Gamemain::draw_note(long count,int lane,int color,long end_count){
 	SDL_RenderCopyEx(render, note[color], NULL, &rect_note, 60 * lane, &lt, SDL_FLIP_NONE);
 }
 
-bool Gamemain::check_judge(long count,bool add_judge) {
+bool Gamemain::check_judge(long count,bool add_judge,int *judge_container) {
 	long now_count = bmsm.time_to_count(play_time);
 	long judge_count[4] = {
 		bmsm.time_to_count(play_time + R_PERFECT * 1000 / FPS) - now_count,
@@ -123,7 +123,8 @@ bool Gamemain::check_judge(long count,bool add_judge) {
 	curr_timing=T_NONE;
 	for (int i= 0; i < 4; i++) {
 		if (dis_count > judge_count[i])continue;
-		if (!add_judge)return i!=3;
+		if(judge_container!=NULL)*judge_container = i;
+		if (!add_judge)return i!=3;//miss or not
 		judge[i]++;
 		curr_judge = i;
 		//judgement
@@ -147,6 +148,7 @@ bool Gamemain::check_judge(long count,bool add_judge) {
 		//colorful gauge
 		return true;
 	}
+	if(judge_container!=NULL)*judge_container = -1;
 	return false;
 }
 
@@ -277,17 +279,25 @@ int Gamemain::play(){
 				bmsm.set_pushed(0, notes[i][j].get_index());
 			}
 			//bgm
-			if (notes[i][j].get_count() < bmsm.time_to_count(play_time - R_GOOD * 1000 / FPS) && notes[i][j].get_end_count() < bmsm.time_to_count(play_time - R_GOOD * 1000 / FPS)) {
+			if (notes[i][j].get_count() < bmsm.time_to_count(play_time - R_GOOD * 1000 / FPS)) {
 				if (i != 0) {
-					if (!notes[i][j].pushed) {
+					if (notes[i][j].get_end_count() < bmsm.time_to_count(play_time - R_GOOD * 1000 / FPS)) {
+						if (notes[i][j].is_ln() && pushing_long[i - 1])pushing_long[i - 1] = false;
+						else if (!notes[i][j].pushed) {
+							combo = 0;
+							colorful_gauge += COL_GAUGE[3];
+							if (colorful_gauge < 0.0f)colorful_gauge = 0.0f;
+							curr_judge = 3;
+							curr_timing = T_LATE;
+						}
+						bmsm.set_next_note(notes[i][j].is_ln() ? i + 13 : i + 7);
+					} else if (!pushing_long[i - 1]) {
 						combo = 0;
 						colorful_gauge += COL_GAUGE[3];
 						if (colorful_gauge < 0.0f)colorful_gauge = 0.0f;
 						curr_judge = 3;
 						curr_timing = T_LATE;
 					}
-					if (notes[i][j].is_ln() && pushing_long[i - 1])pushing_long[i-1] = false;
-					bmsm.set_next_note(notes[i][j].is_ln() ? i + 13 : i + 7);
 				}
 				continue;
 			}
@@ -300,18 +310,23 @@ int Gamemain::play(){
 			if (i == 0)continue;
 			if (input[i-1] == 1) {
 				if (notes[i][j].pushed)continue;
-				if (notes[i][j].get_end_count() != -1) {
-					if(check_judge(notes[i][j].get_count()))pushing_long[i - 1] = true;
+				if (notes[i][j].is_ln()) {
+					if(ln_judge[i-1]=check_judge(notes[i][j].get_count(),true,&ln_judge[i-1]))pushing_long[i - 1] = true;
 				}
 				else if (check_judge(notes[i][j].get_count()))bmsm.set_pushed(i + 7, notes[i][j].get_index());
-			} else if (input[i - 1] == -1 && pushing_long[i-1]) {
+			} else if (input[i - 1] == -1 && pushing_long[i-1]&&notes[i][j].is_ln()) {
 				pushing_long[i - 1] = false;
 				bmsm.set_pushed(i + 13, notes[i][j].get_index());
-				if (notes[i][j].get_end_count() != -1) {
-					if (!check_judge(notes[i][j].get_end_count(),false)) {
-						combo = 0;
-						judge[3]++;
-						colorful_gauge += COL_GAUGE[3];
+				if (!check_judge(notes[i][j].get_end_count(), false)&&notes[i][j].get_end_count()>bmsm.time_to_count(play_time)) {
+					combo = 0;
+					judge[3]++;
+					colorful_gauge += COL_GAUGE[3];
+					if (colorful_gauge < 0.0f)colorful_gauge = 0.0f;
+					curr_judge = 3;
+					curr_timing = T_FAST;
+					if (ln_judge[i - 1] >= 0 && ln_judge[i - 1] < 3) {
+						if(judge[ln_judge[i-1]]>0)judge[ln_judge[i - 1]]--;
+						colorful_gauge -= COL_GAUGE[ln_judge[i - 1]];
 						if (colorful_gauge < 0.0f)colorful_gauge = 0.0f;
 					}
 				}
