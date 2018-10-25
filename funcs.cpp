@@ -60,14 +60,14 @@ BMS_Manager::BMS_Manager(SDL_Renderer* render) {
 		GetModuleFileName(NULL, &curr_dir[0], 256);
 		root_dir = regex_replace(curr_dir, regex("\\\\[^\\\\]+$"), "");
 		//char_traits<char>::copy(curr_dir, regex_replace(curr_dir, regex("\\\\[^\\\\]+$"), "").c_str(), 256);
-		h_dir = FindFirstFile((root_dir + "\\data\\*").c_str(), &dir_data);
+		h_dir = FindFirstFile((root_dir + "\\song\\*").c_str(), &dir_data);
 		if (h_dir == INVALID_HANDLE_VALUE) {
 			if (GetLastError() != ERROR_NO_MORE_FILES)error = -1;
 		}
 		while (error == 0) {
 			if (string(dir_data.cFileName).compare(".") != 0 && string(dir_data.cFileName).compare("..") != 0) {
 				is_first = true;
-				dir_path = root_dir + "\\data\\" + dir_data.cFileName + "\\";
+				dir_path = root_dir + "\\song\\" + dir_data.cFileName + "\\";
 				for (int i = 0; i < 3; i++) {
 					error = 0;
 					h_file = FindFirstFile((dir_path + wildcards[i]).c_str(), &file_data);
@@ -357,17 +357,18 @@ void BMS_Manager::set_time_bpm_change() {
 	long time = 0l;
 	for (int i=1;i<music[2].size();i++){
 		time = time_bpm_change[i - 1];
-		time += (music[2][i].get_count() - music[2][i - 1].get_count())/BAR_STANDARD*4/stol(music[2][i].get_data(),NULL,16)*60000;
+		time += (long)((music[2][i].get_count() - music[2][i - 1].get_count())/BAR_STANDARD*4/float(stol(music[2][i].get_data(),NULL,16))*60000);//ms
 		time_bpm_change.push_back(time);
 	}
 	return;
 }
 long BMS_Manager::time_to_count(long time) {
 	int i;
+	//time += 50;//for projector
 	for (i= 0;i<time_bpm_change.size()-1; i++) {
 		if (time_bpm_change[i+1] > time)break;
 	}
-	return music[2][i].get_count() + long(stol(music[2][i].get_data(),NULL,16)/60.0*double(time - time_bpm_change[i])/1000.0*double(BAR_STANDARD)/4.0);
+	return music[2][i].get_count() + long(double(stol(music[2][i].get_data(),NULL,16))/60.0*double(time - time_bpm_change[i])/1000.0*double(BAR_STANDARD)/4.0);
 }
 
 //algorithms

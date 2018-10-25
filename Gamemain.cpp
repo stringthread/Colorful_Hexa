@@ -17,6 +17,12 @@ void Gamemain::change_mode() {
 			mode = M_LOADING;
 			break;
 		case M_LOADING:
+			Mix_PlayChannel(-1, bgm_ready, 1);
+			play_start = timer->get_time();
+			play_time = 0l;
+			mode = M_READY;
+			break;
+		case M_READY:
 			play_start = timer->get_time();
 			play_time = 0l;
 			mode = M_PLAY;
@@ -112,7 +118,7 @@ void Gamemain::draw_note(long count,int lane,int color,long end_count){
 }
 
 bool Gamemain::check_judge(long count,bool add_judge,int *judge_container) {
-	long now_count = bmsm.time_to_count(play_time);
+	long now_count = bmsm.time_to_count(play_time/*-250*/);//projectior
 	long judge_count[4] = {
 		bmsm.time_to_count(play_time + R_PERFECT * 1000 / FPS) - now_count,
 		bmsm.time_to_count(play_time + R_GREAT * 1000 / FPS) - now_count,
@@ -124,7 +130,9 @@ bool Gamemain::check_judge(long count,bool add_judge,int *judge_container) {
 	for (int i= 0; i < 4; i++) {
 		if (dis_count > judge_count[i])continue;
 		if(judge_container!=NULL)*judge_container = i;
-		if (!add_judge)return i!=3;//miss or not
+		if (!add_judge) {
+			return i < 2;
+		}//perfect or great
 		judge[i]++;
 		curr_judge = i;
 		//judgement
@@ -143,7 +151,7 @@ bool Gamemain::check_judge(long count,bool add_judge,int *judge_container) {
 		}
 		//combo
 
-		colorful_gauge += COL_GAUGE[i];
+		colorful_gauge += unit_col_gauge*COL_GAUGE[i];
 		if (colorful_gauge < 0.0f)colorful_gauge = 0.0f;
 		//colorful gauge
 		return true;
@@ -243,6 +251,7 @@ int Gamemain::choose(){
 
 int Gamemain::loading() {
 	if (bmsm.music_loaded) {
+		unit_col_gauge = 18.0f/bmsm.get_num_note();
 		if (any_pressed()) {
 			bmsm.music_loaded = false;
 			change_mode();
@@ -279,35 +288,8 @@ int Gamemain::play(){
 				bmsm.set_pushed(0, notes[i][j].get_index());
 			}
 			//bgm
-			if (notes[i][j].get_count() < bmsm.time_to_count(play_time - R_GOOD * 1000 / FPS)) {
-				if (i != 0) {
-					if (notes[i][j].get_end_count() < bmsm.time_to_count(play_time - R_GOOD * 1000 / FPS)) {
-						if (notes[i][j].is_ln() && pushing_long[i - 1])pushing_long[i - 1] = false;
-						else if (!notes[i][j].pushed) {
-							combo = 0;
-							colorful_gauge += COL_GAUGE[3];
-							if (colorful_gauge < 0.0f)colorful_gauge = 0.0f;
-							curr_judge = 3;
-							curr_timing = T_LATE;
-						}
-						bmsm.set_next_note(notes[i][j].is_ln() ? i + 13 : i + 7);
-					} else if (!pushing_long[i - 1]) {
-						combo = 0;
-						colorful_gauge += COL_GAUGE[3];
-						if (colorful_gauge < 0.0f)colorful_gauge = 0.0f;
-						curr_judge = 3;
-						curr_timing = T_LATE;
-					}
-				}
-				continue;
-			}
-			if(notes[i][j].pushed&&notes[i][j].get_count() < bmsm.time_to_count(play_time)&& notes[i][j].get_end_count() < bmsm.time_to_count(play_time)) {
-				bmsm.set_next_note(notes[i][j].is_ln() ? i + 13 : i + 7);
-				continue;
-			}
-			//check if note in range
 
-			if (i == 0)continue;
+			if (i == 0)break;
 			if (input[i-1] == 1) {
 				if (notes[i][j].pushed)continue;
 				if (notes[i][j].is_ln()) {
@@ -320,17 +302,40 @@ int Gamemain::play(){
 				if (!check_judge(notes[i][j].get_end_count(), false)&&notes[i][j].get_end_count()>bmsm.time_to_count(play_time)) {
 					combo = 0;
 					judge[3]++;
-					colorful_gauge += COL_GAUGE[3];
+					colorful_gauge += unit_col_gauge*COL_GAUGE[3];
 					if (colorful_gauge < 0.0f)colorful_gauge = 0.0f;
 					curr_judge = 3;
 					curr_timing = T_FAST;
 					if (ln_judge[i - 1] >= 0 && ln_judge[i - 1] < 3) {
 						if(judge[ln_judge[i-1]]>0)judge[ln_judge[i - 1]]--;
-						colorful_gauge -= COL_GAUGE[ln_judge[i - 1]];
+						colorful_gauge -= unit_col_gauge*COL_GAUGE[ln_judge[i - 1]];
 						if (colorful_gauge < 0.0f)colorful_gauge = 0.0f;
+						ln_judge[i - 1] = -1;
 					}
 				}
 			}
+			if (notes[i][j].get_count() < bmsm.time_to_count(play_time - R_GOOD * 1000 / FPS)) {
+				if (i != 0) {
+					if (notes[i][j].get_end_count() < bmsm.time_to_count(play_time - R_GOOD * 1000 / FPS)) {
+						if (notes[i][j].is_ln() && pushing_long[i - 1])pushing_long[i - 1] = false;
+						else if (!notes[i][j].pushed) {
+							combo = 0;
+							colorful_gauge += unit_col_gauge*COL_GAUGE[3];
+							if (colorful_gauge < 0.0f)colorful_gauge = 0.0f;
+							curr_judge = 3;
+							curr_timing = T_LATE;
+							bmsm.set_pushed(notes[i][j].is_ln() ? (i + 13) : (i + 7), notes[i][j].get_index());
+						}
+						bmsm.set_next_note(notes[i][j].is_ln() ? i + 13 : i + 7);
+					}
+				}
+				continue;
+			}
+			if (notes[i][j].pushed&&notes[i][j].get_count() < bmsm.time_to_count(play_time) && notes[i][j].get_end_count() < bmsm.time_to_count(play_time)) {
+				bmsm.set_next_note(notes[i][j].is_ln() ? i + 13 : i + 7);
+				continue;
+			}
+			//check if note in range
 			break;
 		}
 	}
@@ -404,24 +409,24 @@ void Gamemain::init(){
 	rect_r.y = rect_l.y = (scr_h - rect_r.h) / 2;
 	rect_col.x = rect_btn[4].x + rect_btn[4].w; rect_col.w = rect_btn[1].x - rect_col.x;
 	SDL_Surface* tmp=NULL;
-	tmp = IMG_Load((string(curr_dir) + "\\image\\border.png").c_str());
+	tmp = IMG_Load((string(curr_dir) + "\\data\\border.png").c_str());
 	border = SDL_CreateTextureFromSurface(render, tmp);
 	SDL_FreeSurface(tmp);
 	for (int i= 0; i < 6; i++) {
-		tmp = IMG_Load((string(curr_dir) + "\\image\\btn_" + to_string(i)+".png").c_str());
+		tmp = IMG_Load((string(curr_dir) + "\\data\\btn_" + to_string(i)+".png").c_str());
 		btn[i] = SDL_CreateTextureFromSurface(render,tmp);
 		SDL_FreeSurface(tmp);
-		tmp = IMG_Load((string(curr_dir) + "\\image\\btn_p_" + to_string(i)+".png").c_str());
+		tmp = IMG_Load((string(curr_dir) + "\\data\\btn_p_" + to_string(i)+".png").c_str());
 		btn_p[i] = SDL_CreateTextureFromSurface(render, tmp);
 		SDL_FreeSurface(tmp);
-		tmp = IMG_Load((string(curr_dir) + "\\image\\btn_col_" + to_string(i) + ".png").c_str());
+		tmp = IMG_Load((string(curr_dir) + "\\data\\btn_col_" + to_string(i) + ".png").c_str());
 		btn_col[i] = SDL_CreateTextureFromSurface(render, tmp);
 		SDL_FreeSurface(tmp);
-		tmp = IMG_Load((string(curr_dir) + "\\image\\n_" + to_string(i) + ".png").c_str());
+		tmp = IMG_Load((string(curr_dir) + "\\data\\n_" + to_string(i) + ".png").c_str());
 		note[i] = SDL_CreateTextureFromSurface(render, tmp);
 		SDL_FreeSurface(tmp);
 		for (int j = 0; j < 2; j++) {
-			tmp = IMG_Load((string(curr_dir) + "\\image\\ln_" + to_string(i) + "_" + to_string(j) + ".png").c_str());
+			tmp = IMG_Load((string(curr_dir) + "\\data\\ln_" + to_string(i) + "_" + to_string(j) + ".png").c_str());
 			ln[i][j] = SDL_CreateTextureFromSurface(render, tmp);
 			SDL_FreeSurface(tmp);
 		}
@@ -431,20 +436,20 @@ void Gamemain::init(){
 		SDL_QueryTexture(ln[0][i], NULL, NULL, &tex_w, &tex_h);
 		size_ln[i] = float(tex_w) / float(tex_h);
 	}
-	tmp = IMG_Load((string(curr_dir) + "\\image\\ln_end.png").c_str());
+	tmp = IMG_Load((string(curr_dir) + "\\data\\ln_end.png").c_str());
 	note[6] = SDL_CreateTextureFromSurface(render, tmp);
 	SDL_FreeSurface(tmp);
 
-	tmp = IMG_Load((string(curr_dir) + "\\image\\Perfect.png").c_str());
+	tmp = IMG_Load((string(curr_dir) + "\\data\\Perfect.png").c_str());
 	letter_judge[0] = SDL_CreateTextureFromSurface(render, tmp);
 	SDL_FreeSurface(tmp);
-	tmp = IMG_Load((string(curr_dir) + "\\image\\Great.png").c_str());
+	tmp = IMG_Load((string(curr_dir) + "\\data\\Great.png").c_str());
 	letter_judge[1] = SDL_CreateTextureFromSurface(render, tmp);
 	SDL_FreeSurface(tmp);
-	tmp = IMG_Load((string(curr_dir) + "\\image\\Good.png").c_str());
+	tmp = IMG_Load((string(curr_dir) + "\\data\\Good.png").c_str());
 	letter_judge[2] = SDL_CreateTextureFromSurface(render, tmp);
 	SDL_FreeSurface(tmp);
-	tmp = IMG_Load((string(curr_dir) + "\\image\\Miss.png").c_str());
+	tmp = IMG_Load((string(curr_dir) + "\\data\\Miss.png").c_str());
 	letter_judge[3] = SDL_CreateTextureFromSurface(render, tmp);
 	SDL_FreeSurface(tmp);
 	rect_judge.x = int(scr_w*0.4f);
@@ -452,16 +457,16 @@ void Gamemain::init(){
 	SDL_QueryTexture(letter_judge[0], NULL, NULL, &tex_w, &tex_h);
 	rect_judge.h = rect_judge.w*tex_h / tex_w;
 	rect_judge.y = scr_h / 2 - rect_judge.h;
-	bg_1.init(render, (string(curr_dir) + "\\image\\bg_1.png").c_str());
-	bg_2.init(render, (string(curr_dir) + "\\image\\bg_2.png").c_str());
+	bg_1.init(render, (string(curr_dir) + "\\data\\bg_1.png").c_str());
+	bg_2.init(render, (string(curr_dir) + "\\data\\bg_2.png").c_str());
 
-	tmp = IMG_Load((string(curr_dir) + "\\image\\Just.png").c_str());
+	tmp = IMG_Load((string(curr_dir) + "\\data\\Just.png").c_str());
 	letter_timing[0] = SDL_CreateTextureFromSurface(render, tmp);
 	SDL_FreeSurface(tmp);
-	tmp = IMG_Load((string(curr_dir) + "\\image\\Fast.png").c_str());
+	tmp = IMG_Load((string(curr_dir) + "\\data\\Fast.png").c_str());
 	letter_timing[1] = SDL_CreateTextureFromSurface(render, tmp);
 	SDL_FreeSurface(tmp);
-	tmp = IMG_Load((string(curr_dir) + "\\image\\Late.png").c_str());
+	tmp = IMG_Load((string(curr_dir) + "\\data\\Late.png").c_str());
 	letter_timing[2] = SDL_CreateTextureFromSurface(render, tmp);
 	SDL_FreeSurface(tmp);
 	rect_timing.x = int(scr_w*0.4f);
@@ -471,6 +476,7 @@ void Gamemain::init(){
 	rect_timing.y = scr_h / 2;
 	//image
 
+	bgm_ready = Mix_LoadWAV((curr_dir + "\\data\\bgm_ready.wav").c_str());
 
 	Mix_AllocateChannels(72);
 	Mix_GroupChannels(0, 1, 0);
@@ -532,6 +538,10 @@ int Gamemain::loop() {//quit when you don't return 0
 	case M_TITLE:title(); break;
 	case M_CHOOSE:choose(); break;
 	case M_LOADING:loading(); break;
+	case M_READY:
+		play_time = (long)(timer->get_time() - play_start);
+		if (play_time >= 5000)change_mode();
+	break;
 	case M_PLAY:play(); break;
 	case M_RESULT:result(); break;
 	}
