@@ -204,15 +204,25 @@ int Gamemain::choose(){
 			break;
 			//choose song
 		case 1:
-			if (input[2] == -1 || input[3] == -1)step_choose--;
+			if (input[2] == -1 || input[3] == -1) {
+				bmsm.reset_lv();
+				bmsm.reset_speed();
+				step_choose--;
+			}
 			if (input[0] == -1 || input[5] == -1)step_choose++;
 			if (input[1]==1 || (input[1] >= 60 && (input[1] - 60) % 20 == 0)) bmsm.change_lv(1);
 			if (input[4]==1 || (input[4] >= 60 && (input[4] - 60) % 20 == 0)) bmsm.change_lv(-1);
 
-			s_letter = TTF_RenderText_Blended(font, (" "+to_string(bmsm.get_lv())+" ").c_str(), f_color);
+			s_letter = TTF_RenderText_Blended(font, text_lv[bmsm.get_lv()].c_str(), f_color);
 			letter = SDL_CreateTextureFromSurface(render, s_letter);
 			SDL_FreeSurface(s_letter);
+			rect_center.w = rect_center.h * 2;
+			rect_center.x = (scr_w - rect_center.w) / 2;
 			SDL_RenderCopy(render, letter, NULL, &rect_center);
+			SDL_DestroyTexture(letter); s_letter = TTF_RenderText_Blended(font, to_string(bmsm.get_playlevel()).c_str(), f_color);
+			letter = SDL_CreateTextureFromSurface(render, s_letter);
+			SDL_FreeSurface(s_letter);
+			SDL_RenderCopy(render, letter, NULL, &rect_bottom);
 			SDL_DestroyTexture(letter);
 			//draw choose lv screen
 			break;
@@ -226,6 +236,8 @@ int Gamemain::choose(){
 			s_letter = TTF_RenderText_Blended(font, digit(bmsm.get_speed(),2).c_str(), f_color);
 			letter = SDL_CreateTextureFromSurface(render, s_letter);
 			SDL_FreeSurface(s_letter);
+			rect_center.w = rect_center.h*1.5f;
+			rect_center.x = (scr_w - rect_center.w) / 2;
 			SDL_RenderCopy(render, letter, NULL, &rect_center);
 			SDL_DestroyTexture(letter);
 			//draw choose speed screen
@@ -400,6 +412,7 @@ void Gamemain::init(){
 	rect_btn[4].x = rect_btn[3].x; rect_btn[4].y = rect_btn[1].y; rect_btn[4].w = rect_btn[1].w; rect_btn[4].h = rect_btn[1].h;
 	rect_btn[5].x = rect_btn[3].x; rect_btn[5].y = rect_btn[0].y; rect_btn[5].w = rect_btn[0].w; rect_btn[5].h = rect_btn[0].h;
 	rect_center = { int(scr_w*0.3f),int(scr_h*0.4f),int(scr_w*0.4f),int(scr_h*0.2f) };
+	rect_bottom= { int(scr_w*0.4f),int(scr_h*0.65f),int(scr_w*0.15f),int(scr_h*0.15f) };
 	rect_stagefile.w = rect_stagefile.h = min(scr_w, scr_h) / 2;
 	rect_stagefile.x = (scr_w - rect_stagefile.w) / 2;
 	rect_stagefile.y = (scr_h - rect_stagefile.h) / 2;
