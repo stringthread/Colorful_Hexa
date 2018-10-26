@@ -17,14 +17,9 @@ void Gamemain::change_mode() {
 			mode = M_LOADING;
 			break;
 		case M_LOADING:
-			Mix_PlayChannel(-1, bgm_ready, 1);
-			play_start = timer->get_time();
-			play_time = 0l;
-			mode = M_READY;
-			break;
-		case M_READY:
-			play_start = timer->get_time();
-			play_time = 0l;
+			Mix_PlayChannel(-1, bgm_ready, 0);
+			play_time = -5000l;
+			play_start = timer->get_time()-play_time;
 			mode = M_PLAY;
 			break;
 		case M_PLAY:mode = M_RESULT; break;
@@ -263,7 +258,7 @@ int Gamemain::choose(){
 
 int Gamemain::loading() {
 	if (bmsm.music_loaded) {
-		unit_col_gauge = 18.0f/bmsm.get_num_note();
+		unit_col_gauge = 12.0f/bmsm.get_num_note();
 		if (any_pressed()) {
 			bmsm.music_loaded = false;
 			change_mode();
@@ -286,18 +281,20 @@ int Gamemain::play(){
 		if (notes[i].size() == 0)continue;
 		for (int j = 0; j < notes[i].size(); j++) {
 			if (i == 0 && !notes[i][j].pushed) {
-				if(bmsm.time_to_count(play_time/*-120l*/)<2*bmsm.BAR_STANDARD){
-					ch = Mix_GroupAvailable(7);
-					if (ch != -1)goto play;
-				}
-				ch = Mix_GroupAvailable(6);
-				if (ch == -1) {
-					ch = Mix_GroupOldest(6);
-					if (Mix_Playing(ch)==1)Mix_HaltChannel(ch);
-				}
+				if (notes[i][j].get_count()<=bmsm.time_to_count(play_time)) {
+					if (bmsm.time_to_count(play_time/*-120l*/) < 2 * bmsm.BAR_STANDARD) {
+						ch = Mix_GroupAvailable(7);
+						if (ch != -1)goto play;
+					}
+					ch = Mix_GroupAvailable(6);
+					if (ch == -1) {
+						ch = Mix_GroupOldest(6);
+						if (Mix_Playing(ch) == 1)Mix_HaltChannel(ch);
+					}
 				play:
-				Mix_PlayChannel(ch, bmsm.get_wav(notes[i][j].get_data()), 0);
-				bmsm.set_pushed(0, notes[i][j].get_index());
+					Mix_PlayChannel(ch, bmsm.get_wav(notes[i][j].get_data()), 0);
+					bmsm.set_pushed(0, notes[i][j].get_index());
+				}
 			}
 			//bgm
 
@@ -399,7 +396,6 @@ int Gamemain::result(){
 void Gamemain::init(){
 	TTF_Init();
 	char c_curr_dir[256] = {};
-	string curr_dir;
 	GetModuleFileName(NULL, &c_curr_dir[0], 256);
 	curr_dir=regex_replace(c_curr_dir, regex("\\\\[^\\\\]+$"), "");
 	font = TTF_OpenFont((curr_dir + "\\font\\font.ttf").c_str(), 200);
@@ -551,10 +547,6 @@ int Gamemain::loop() {//quit when you don't return 0
 	case M_TITLE:title(); break;
 	case M_CHOOSE:choose(); break;
 	case M_LOADING:loading(); break;
-	case M_READY:
-		play_time = (long)(timer->get_time() - play_start);
-		if (play_time >= 5000)change_mode();
-	break;
 	case M_PLAY:play(); break;
 	case M_RESULT:result(); break;
 	}

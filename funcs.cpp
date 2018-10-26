@@ -109,7 +109,7 @@ int BMS_Manager::Header::load(string dir,string file,bool is_first,SDL_Renderer*
 	bmsfile.push_back(file);
 	ifstream ifs(bmsfile.back());
 	string line,data;
-	bool has_total;
+	bool has_total=false;
 
 	bar_num.push_back(1);
 	//set default
