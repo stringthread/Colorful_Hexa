@@ -42,8 +42,8 @@ void Gamemain::change_mode() {
 }
 
 void Gamemain::calc_score() {
-	score = (long)(100000 / bmsm.get_num_note()*(judge[0] * S_PERFECT + judge[1] * S_GREAT + judge[2] * S_GOOD));
-	score += (long)(10000 / bmsm.get_num_note() *max_combo);
+	score = (long)((judge[0] * S_PERFECT + judge[1] * S_GREAT + judge[2] * S_GOOD)*100000.0f / bmsm.get_num_note());
+	score += (long)(max_combo*10000.0f / bmsm.get_num_note());
 	score += (long)(10000.0f * colorful_gauge/100);
 	/*
 	if (colorful_gauge >= 1.0f) {
@@ -62,11 +62,20 @@ void Gamemain::calc_score() {
 	//*///color back
 }
 
-void Gamemain::draw_note(long count,int lane,int color,long end_count){
-	if (lane < 0 || lane >= 6)return;
+void Gamemain::draw_note(long count,int lane,int color,long end_count,bool is_bar){
+	if (!is_bar&&(lane < 0 || lane >= 6))return;
 
 	float dis_note_in,dis_note_out;
 	if (count < bmsm.time_to_count(play_time) && end_count < bmsm.time_to_count(play_time))return;
+
+	if (is_bar) {
+		rect_note.h = (0.3f + 0.7f*(count - bmsm.time_to_count(play_time)) / (bmsm.time_to_count(play_time + bmsm.time_draw_start) - bmsm.time_to_count(play_time))) * scr_h;
+		rect_note.w = rect_note.h*sin(pi / 3);
+		rect_note.x = (scr_w - rect_note.w) / 2;
+		rect_note.y = (scr_h - rect_note.h) / 2;
+		SDL_RenderCopy(render, bar_line, NULL, &rect_note);
+		return;
+	}
 
 	if (end_count > 0) {
 		dis_note_in = (0.3f + 0.7f*max(count - bmsm.time_to_count(play_time), 0) / (bmsm.time_to_count(play_time + bmsm.time_draw_start) - bmsm.time_to_count(play_time)))*scr_h/2;
@@ -96,8 +105,8 @@ void Gamemain::draw_note(long count,int lane,int color,long end_count){
 		//center rect
 		//SDL_RenderDrawRect(render, &rect_note);
 
-		if(count>bmsm.time_to_count(play_time))draw_note(count, lane, 6);
-		if (end_count < bmsm.time_to_count(play_time + bmsm.time_draw_start))draw_note(end_count, lane, 6);
+		if(count>bmsm.time_to_count(play_time))draw_note(count, lane, 6,-1,false);
+		if (end_count < bmsm.time_to_count(play_time + bmsm.time_draw_start))draw_note(end_count, lane, 6,-1,false);
 		return;
 	}
 	
@@ -298,7 +307,7 @@ int Gamemain::play(){
 			}
 			//bgm
 
-			if (i == 0)break;
+			if (i == 0)continue;
 			if (input[i-1] == 1) {
 				if (notes[i][j].pushed)continue;
 				if (notes[i][j].is_ln()) {
@@ -307,7 +316,7 @@ int Gamemain::play(){
 				else if (check_judge(notes[i][j].get_count()))bmsm.set_pushed(i + 7, notes[i][j].get_index());
 			} else if (input[i - 1] == -1 && pushing_long[i-1]&&notes[i][j].is_ln()) {
 				pushing_long[i - 1] = false;
-				bmsm.set_pushed(i + 13, notes[i][j].get_index());
+				bmsm.set_pushed(i + 14, notes[i][j].get_index());
 				if (!check_judge(notes[i][j].get_end_count(), false)&&notes[i][j].get_end_count()>bmsm.time_to_count(play_time)) {
 					combo = 0;
 					judge[3]++;
@@ -333,15 +342,15 @@ int Gamemain::play(){
 							if (colorful_gauge < 0.0f)colorful_gauge = 0.0f;
 							curr_judge = 3;
 							curr_timing = T_LATE;
-							bmsm.set_pushed(notes[i][j].is_ln() ? (i + 13) : (i + 7), notes[i][j].get_index());
+							bmsm.set_pushed(notes[i][j].is_ln() ? (i + 14) : (i + 7), notes[i][j].get_index());
 						}
-						bmsm.set_next_note(notes[i][j].is_ln() ? i + 13 : i + 7);
+						bmsm.set_next_note(notes[i][j].is_ln() ? i + 14 : i + 7);
 					}
 				}
 				continue;
 			}
 			if (notes[i][j].pushed&&notes[i][j].get_count() < bmsm.time_to_count(play_time) && notes[i][j].get_end_count() < bmsm.time_to_count(play_time)) {
-				bmsm.set_next_note(notes[i][j].is_ln() ? i + 13 : i + 7);
+				bmsm.set_next_note(notes[i][j].is_ln() ? i + 14 : i + 7);
 				continue;
 			}
 			//check if note in range
@@ -360,10 +369,11 @@ int Gamemain::play(){
 	rect_col.y = scr_h / 2 + (int)(1.732f/3*rect_col.w) - rect_col.h;
 	SDL_RenderFillRect(render,&rect_col);
 
-	for (int i= 0; i < 6; i++) {
+	for (int i= 0; i <= 6; i++) {
 		for (int j = 0; j < notes[i+1].size(); j++) {
-			draw_note(notes[i+1][j].get_count(),i,colors,notes[i+1][j].get_end_count());
+			draw_note(notes[i+1][j].get_count(),i,colors,notes[i+1][j].get_end_count(),i==6);
 		}
+		if (i == 6)continue;
 		SDL_RenderCopy(render,(input[i] > 0) ? btn_p[i] : btn[i], NULL,  &rect_btn[i]);
 		if(colorful_gauge>=i+1)SDL_RenderCopy(render, btn_col[i], NULL, &rect_btn[i]);
 	}
@@ -420,6 +430,9 @@ void Gamemain::init(){
 	SDL_Surface* tmp=NULL;
 	tmp = IMG_Load((string(curr_dir) + "\\data\\border.png").c_str());
 	border = SDL_CreateTextureFromSurface(render, tmp);
+	SDL_FreeSurface(tmp);
+	tmp = IMG_Load((string(curr_dir) + "\\data\\bar_line.png").c_str());
+	bar_line = SDL_CreateTextureFromSurface(render, tmp);
 	SDL_FreeSurface(tmp);
 	for (int i= 0; i < 6; i++) {
 		tmp = IMG_Load((string(curr_dir) + "\\data\\btn_" + to_string(i)+".png").c_str());

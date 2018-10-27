@@ -222,7 +222,7 @@ int BMS_Manager::load_music(SDL_Renderer *render){
 	}
 
 	bar_count = vector<long>(header[sel].bar_num[lv]+3, -1);
-	curr_bar_count = stoi(header[sel].bpm[lv]) / 130 * BAR_STANDARD;
+	curr_bar_count = stoi(header[sel].bpm[lv]) * BAR_STANDARD / 130;
 	music[2].emplace_back(header[sel].bpm[lv],0, 0l);
 	bar_count[0]=0l;
 	//set initial data
@@ -259,10 +259,10 @@ int BMS_Manager::load_music(SDL_Renderer *render){
 		bar_no = stoi(line.substr(1, 3));
 		channel = stoi(line.substr(4, 2));
 
-		if ((51 > channel && channel >= 17)||channel==10||channel==9||channel==2)continue;
+		if ((51 > channel && channel > 18)||channel==10||channel==9||channel==2)continue;
 		if (channel <= 8)channel--;
-		else if(channel<17)channel -= 3;
-		else channel -= 37;
+		else if(channel<18)channel -= 3;
+		else channel -= 36;
 		//channel -> array key
 
 		string tmp_data = line.substr(7);
@@ -280,19 +280,19 @@ int BMS_Manager::load_music(SDL_Renderer *render){
 
 		for (unsigned i = 0; i < data.size(); i++) {
 			if (data[i] == "00")continue;
-			if (channel < 14) {
+			if (channel < 15) {
 				music[channel].emplace_back(data[i], bar_no, (long)(bar_count[(bar_no == 0) ? 0 : (bar_no - 1)] + i * (bar_count[bar_no] - bar_count[(bar_no == 0) ? 0 : (bar_no - 1)]) / data.size()));
 				num_note++;
 			}
 			//for normal notes
 
 			else {
-				if (ln_start[channel - 14] > 0) {//for end note
-					music[channel].emplace_back(data[i], start_bar_no[channel-14], ln_start[channel - 14] , (long)(bar_count[bar_no-1] + i * (bar_count[bar_no] - bar_count[bar_no-1]) / data.size()));
-					ln_start[channel - 14] = -1;
+				if (ln_start[channel - 15] > 0) {//for end note
+					music[channel].emplace_back(data[i], start_bar_no[channel - 15], ln_start[channel - 15] , (long)(bar_count[bar_no-1] + i * (bar_count[bar_no] - bar_count[bar_no-1]) / data.size()));
+					ln_start[channel - 15] = -1;
 				} else {//for start note
-					start_bar_no[channel - 14] = bar_no;
-					ln_start[channel - 14] = (long)(bar_count[bar_no - 1] + i * (bar_count[bar_no] - bar_count[bar_no - 1]) / data.size());
+					start_bar_no[channel - 15] = bar_no;
+					ln_start[channel - 15] = (long)(bar_count[bar_no - 1] + i * (bar_count[bar_no] - bar_count[bar_no - 1]) / data.size());
 					num_note++;
 				}
 			}
@@ -337,15 +337,15 @@ void BMS_Manager::reset() {
 	error = 0;
 }
 void BMS_Manager::get_notes(vector<BMS_Manager::ENote> en[],long time) {
-	for (int i= 0; i < 13; i++) {
-		if(i<7)en[i].clear();
+	for (int i= 0; i < 14; i++) {
+		if(i<8)en[i].clear();
 		if (music[(i==0)?0:i+7].size() <= next_note[(i==0)?0:i+7])continue;
 		for (int j = next_note[(i==0)?0:i+7];music[(i==0)?0:i+7][j].get_count()<time_to_count(time + time_draw_start/*-((i==0)?120l:0)*/); j++) {
-			en[(i<7)?i:i-6].emplace_back(music[(i==0)?0:i + 7][j], j);
+			en[(i<8)?i:i-7].emplace_back(music[(i==0)?0:i + 7][j], j);
 			if (j >= music[(i==0)?0:i+7].size()-1)break;
 		}
 	}
-	for (int i= 0; i < 6; i++) {
+	for (int i= 0; i < 8; i++) {
 		if (en[i].size() == 0)continue;
 		sort(en[i].begin(), en[i].end());
 	}
