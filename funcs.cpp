@@ -40,10 +40,33 @@ void Timer::close(){
 
 //QR_Reader
 int QR_Reader::init() {
+	cap.open(0); // open the video camera no. 0
+	if (!cap.isOpened())  // if not success, exit program
+	{
+		return -1;
+	}
+	scanner.set_config(ZBAR_NONE, ZBAR_CFG_ENABLE, 1);
+	dWidth = cap.get(CV_CAP_PROP_FRAME_WIDTH); //get the width of frames of the video
+	dHeight = cap.get(CV_CAP_PROP_FRAME_HEIGHT); //get the height of frames of the video
 	return 0;
 }
 bool QR_Reader::read(){
-	return false;
+	Mat frame;
+	bool bSuccess = cap.read(frame); // read a new frame from video
+	if (!bSuccess)return false;
+	Mat grey;
+	cvtColor(frame, grey, CV_BGR2GRAY);
+	int width = frame.cols;
+	int height = frame.rows;
+	uchar *raw = (uchar *)grey.data;
+	// wrap image data
+	Image image(width, height, "Y800", raw, width * height);
+	int n = scanner.scan(image);
+	if (n <= 0)return false;
+	for (Image::SymbolIterator symbol = image.symbol_begin(); symbol != image.symbol_end(); ++symbol) {
+		user_id=regex_replace(symbol->get_data(),regex("^https://.+?"),"");
+	}
+	return true;
 }
 void QR_Reader::reset(){}
 void QR_Reader::close(){}
@@ -267,7 +290,7 @@ int BMS_Manager::load_music(SDL_Renderer *render){
 
 		string tmp_data = line.substr(7);
 		data.clear();
-		if (channel == 2)data.push_back(tmp_data);
+		if (channel == 2)data.push_back(to_string(stoi(tmp_data,0,16)));
 		else {
 			while (tmp_data.length() > 2) {
 				data.push_back(tmp_data.substr(0, 2));
@@ -285,6 +308,7 @@ int BMS_Manager::load_music(SDL_Renderer *render){
 				num_note++;
 			}
 			//for normal notes
+
 
 			else {
 				if (ln_start[channel - 15] > 0) {//for end note
@@ -357,7 +381,7 @@ void BMS_Manager::set_time_bpm_change() {
 	long time = 0l;
 	for (int i=1;i<music[2].size();i++){
 		time = time_bpm_change[i - 1];
-		time += (long)((music[2][i].get_count() - music[2][i - 1].get_count())/BAR_STANDARD*4/float(stol(music[2][i].get_data(),NULL,16))*60000);//ms
+		time += (long)((music[2][i].get_count() - music[2][i - 1].get_count())/BAR_STANDARD*4/float(stol(music[2][i].get_data()))*60000);//ms
 		time_bpm_change.push_back(time);
 	}
 	return;
@@ -368,37 +392,37 @@ long BMS_Manager::time_to_count(long time) {
 	for (i= 0;i<time_bpm_change.size()-1; i++) {
 		if (time_bpm_change[i+1] > time)break;
 	}
-	return music[2][i].get_count() + long(double(stol(music[2][i].get_data(),NULL,16))/60.0*double(time - time_bpm_change[i])/1000.0*double(BAR_STANDARD)/4.0);
+	return music[2][i].get_count() + long(double(stol(music[2][i].get_data()))/60.0*double(time - time_bpm_change[i])/1000.0*double(BAR_STANDARD)/4.0);
 }
 
 //algorithms
 int min_l(initializer_list<int> args) {
-	int min = INT_MAX;
+	int mini = INT_MAX;
 	for (int x : args) {
-		min = min(min, x);
+		mini = min(mini, x);
 	}
-	return min;
+	return mini;
 }
 int max_l(initializer_list<int> args) {
-	int max = INT_MIN;
+	int maxi = INT_MIN;
 	for (int x : args) {
-		max = max(max, x);
+		maxi = max(maxi, x);
 	}
-	return max;
+	return maxi;
 }
 float min_l(initializer_list<float> args) {
-	float min = FLT_MAX;
+	float mini = FLT_MAX;
 	for (float x : args) {
-		min = min(min, x);
+		mini = min(mini, x);
 	}
-	return min;
+	return mini;
 }
 float max_l(initializer_list<float> args) {
-	float max = FLT_MIN;
+	float maxi = FLT_MIN;
 	for (float x : args) {
-		max = max(max, x);
+		maxi = max(maxi, x);
 	}
-	return max;
+	return maxi;
 }
 int SDL_RenderCopyAlpha(SDL_Renderer *render, SDL_Texture *texture, const SDL_Rect *srcrect, const SDL_Rect *dstrect, unsigned int alpha) {
 	if (alpha > 255)return -1;

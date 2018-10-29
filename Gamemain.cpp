@@ -18,7 +18,7 @@ void Gamemain::change_mode() {
 			break;
 		case M_LOADING:
 			Mix_PlayChannel(-1, bgm_ready, 0);
-			play_time = -5000l;
+			play_time = -4000l;
 			play_start = timer->get_time()-play_time;
 			mode = M_PLAY;
 			break;
@@ -73,13 +73,13 @@ void Gamemain::draw_note(long count,int lane,int color,long end_count,bool is_ba
 		rect_note.w = rect_note.h*sin(pi / 3);
 		rect_note.x = (scr_w - rect_note.w) / 2;
 		rect_note.y = (scr_h - rect_note.h) / 2;
-		SDL_RenderCopy(render, bar_line, NULL, &rect_note);
+		SDL_RenderCopyAlpha(render, bar_line, NULL, &rect_note,128);
 		return;
 	}
 
 	if (end_count > 0) {
-		dis_note_in = (0.3f + 0.7f*max(count - bmsm.time_to_count(play_time), 0) / (bmsm.time_to_count(play_time + bmsm.time_draw_start) - bmsm.time_to_count(play_time)))*scr_h/2;
-		dis_note_out = (min(0.3f + 0.7f*(end_count - bmsm.time_to_count(play_time)) / (bmsm.time_to_count(play_time + bmsm.time_draw_start) - bmsm.time_to_count(play_time)), 1)/2+NOTE_W)*scr_h;
+		dis_note_in = (0.3f + 0.7f*max(count - bmsm.time_to_count(play_time), 0l) / (bmsm.time_to_count(play_time + bmsm.time_draw_start) - bmsm.time_to_count(play_time)))*scr_h/2;
+		dis_note_out = (min(0.3f + 0.7f*(end_count - bmsm.time_to_count(play_time)) / (bmsm.time_to_count(play_time + bmsm.time_draw_start) - bmsm.time_to_count(play_time)), 1.0f)/2+NOTE_W)*scr_h;
 		rect_note.h = (dis_note_out - dis_note_in)*sin(pi/3)+1;
 		rect_note.w = rect_note.h*size_ln[0];
 		rect_note.x = scr_w / 2 + sin(pi*lane / 3)*dis_note_in-rect_note.w;
@@ -181,8 +181,9 @@ int Gamemain::title(){
 		if (any_pressed() || qr.read()) {
 			change_mode();
 		}
-		SDL_SetRenderDrawColor(render, 0xaa, 0xaa, 0xff, SDL_ALPHA_OPAQUE);
-		SDL_RenderClear(render);
+		//SDL_SetRenderDrawColor(render, 0xaa, 0xaa, 0xff, SDL_ALPHA_OPAQUE);
+		//SDL_RenderClear(render);
+		SDL_RenderCopyAlpha(render, title_logo, NULL, &rect_title,  191+ 64 * cos(0.002f*timer->get_time()));
 		//draw title screen
 	} else {
 		SDL_SetRenderDrawColor(render, 0xff, 0xaa, 0xff, SDL_ALPHA_OPAQUE);
@@ -362,8 +363,6 @@ int Gamemain::play(){
 	//calculation
 
 	SDL_SetRenderDrawColor(render, COLOR_HEX[colors][0], COLOR_HEX[colors][1], COLOR_HEX[colors][2], SDL_ALPHA_OPAQUE);
-	bg_1.draw();
-	bg_2.draw();
 	//rect_col.h = (int)(1.732f/3*2*rect_col.w*colorful_gauge);//no color back
 	rect_col.h = (int)(1.732f / 3 * 2*rect_col.w*(colorful_gauge-colors));//color back
 	rect_col.y = scr_h / 2 + (int)(1.732f/3*rect_col.w) - rect_col.h;
@@ -411,6 +410,7 @@ void Gamemain::init(){
 	font = TTF_OpenFont((curr_dir + "\\font\\font.ttf").c_str(), 200);
 	//font
 
+	int tex_w, tex_h;
 	rect_btn[0].x = scr_w / 2; rect_btn[0].y = int(0.35f*scr_h); rect_btn[0].w = int(0.15f*scr_w); rect_btn[0].h = int(0.1125f*scr_h);
 	rect_btn[1].x = int(0.575f*scr_w); rect_btn[1].y = int(0.425f*scr_h); rect_btn[1].w = int(0.075f*scr_w); rect_btn[1].h = int(0.15f*scr_h);
 	rect_btn[2].x = rect_btn[0].x; rect_btn[2].y = int(0.5375f*scr_h); rect_btn[2].w = rect_btn[0].w; rect_btn[2].h = rect_btn[0].h;
@@ -434,6 +434,14 @@ void Gamemain::init(){
 	tmp = IMG_Load((string(curr_dir) + "\\data\\bar_line.png").c_str());
 	bar_line = SDL_CreateTextureFromSurface(render, tmp);
 	SDL_FreeSurface(tmp);
+	tmp = IMG_Load((string(curr_dir) + "\\data\\title_logo.png").c_str());
+	title_logo = SDL_CreateTextureFromSurface(render, tmp);
+	SDL_FreeSurface(tmp);
+	SDL_QueryTexture(title_logo, NULL, NULL, &tex_w, &tex_h);
+	rect_title.w = scr_w * 0.8f;
+	rect_title.h = rect_title.w*tex_h / tex_w;
+	rect_title.x = scr_w * 0.1f;
+	rect_title.y = scr_h * 0.55f-rect_title.h/2;
 	for (int i= 0; i < 6; i++) {
 		tmp = IMG_Load((string(curr_dir) + "\\data\\btn_" + to_string(i)+".png").c_str());
 		btn[i] = SDL_CreateTextureFromSurface(render,tmp);
@@ -453,7 +461,6 @@ void Gamemain::init(){
 			SDL_FreeSurface(tmp);
 		}
 	}
-	int tex_w, tex_h;
 	for (int i = 0; i < 3; i++) {
 		SDL_QueryTexture(ln[0][i], NULL, NULL, &tex_w, &tex_h);
 		size_ln[i] = float(tex_w) / float(tex_h);
@@ -555,6 +562,8 @@ int Gamemain::loop() {//quit when you don't return 0
 	SDL_SetRenderDrawColor(render, 0x33, 0x33, 0x33, SDL_ALPHA_OPAQUE);
 	SDL_RenderClear(render);
 	SDL_RenderCopy(render, border, NULL, NULL);
+	bg_1.draw();
+	bg_2.draw();
 
 	switch (mode) {
 	case M_TITLE:title(); break;
