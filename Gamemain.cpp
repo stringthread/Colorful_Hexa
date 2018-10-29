@@ -44,7 +44,7 @@ void Gamemain::change_mode() {
 void Gamemain::calc_score() {
 	score = (long)((judge[0] * S_PERFECT + judge[1] * S_GREAT + judge[2] * S_GOOD)*100000.0f / bmsm.get_num_note());
 	score += (long)(max_combo*10000.0f / bmsm.get_num_note());
-	score += (long)(10000.0f * colorful_gauge/100);
+	score += (long)(10000.0f * colorful_gauge/6);
 	/*
 	if (colorful_gauge >= 1.0f) {
 		if (colors < 5) {
@@ -73,7 +73,7 @@ void Gamemain::draw_note(long count,int lane,int color,long end_count,bool is_ba
 		rect_note.w = rect_note.h*sin(pi / 3);
 		rect_note.x = (scr_w - rect_note.w) / 2;
 		rect_note.y = (scr_h - rect_note.h) / 2;
-		SDL_RenderCopy(render, bar_line, NULL, &rect_note);
+		SDL_RenderCopyAlpha(render, bar_line, NULL, &rect_note,128);
 		return;
 	}
 
@@ -181,8 +181,7 @@ int Gamemain::title(){
 		if (any_pressed() || qr.read()) {
 			change_mode();
 		}
-		SDL_SetRenderDrawColor(render, 0xaa, 0xaa, 0xff, SDL_ALPHA_OPAQUE);
-		SDL_RenderClear(render);
+		SDL_RenderCopyAlpha(render, title_logo, NULL, &rect_title, 180 + 75 * cos(0.001*timer->get_time()));
 		//draw title screen
 	} else {
 		SDL_SetRenderDrawColor(render, 0xff, 0xaa, 0xff, SDL_ALPHA_OPAQUE);
@@ -362,8 +361,6 @@ int Gamemain::play(){
 	//calculation
 
 	SDL_SetRenderDrawColor(render, COLOR_HEX[colors][0], COLOR_HEX[colors][1], COLOR_HEX[colors][2], SDL_ALPHA_OPAQUE);
-	bg_1.draw();
-	bg_2.draw();
 	//rect_col.h = (int)(1.732f/3*2*rect_col.w*colorful_gauge);//no color back
 	rect_col.h = (int)(1.732f / 3 * 2*rect_col.w*(colorful_gauge-colors));//color back
 	rect_col.y = scr_h / 2 + (int)(1.732f/3*rect_col.w) - rect_col.h;
@@ -411,6 +408,7 @@ void Gamemain::init(){
 	font = TTF_OpenFont((curr_dir + "\\font\\font.ttf").c_str(), 200);
 	//font
 
+	int tex_w, tex_h;
 	rect_btn[0].x = scr_w / 2; rect_btn[0].y = int(0.35f*scr_h); rect_btn[0].w = int(0.15f*scr_w); rect_btn[0].h = int(0.1125f*scr_h);
 	rect_btn[1].x = int(0.575f*scr_w); rect_btn[1].y = int(0.425f*scr_h); rect_btn[1].w = int(0.075f*scr_w); rect_btn[1].h = int(0.15f*scr_h);
 	rect_btn[2].x = rect_btn[0].x; rect_btn[2].y = int(0.5375f*scr_h); rect_btn[2].w = rect_btn[0].w; rect_btn[2].h = rect_btn[0].h;
@@ -431,6 +429,14 @@ void Gamemain::init(){
 	tmp = IMG_Load((string(curr_dir) + "\\data\\border.png").c_str());
 	border = SDL_CreateTextureFromSurface(render, tmp);
 	SDL_FreeSurface(tmp);
+	tmp = IMG_Load((string(curr_dir) + "\\data\\title_logo.png").c_str());
+	title_logo = SDL_CreateTextureFromSurface(render, tmp);
+	SDL_FreeSurface(tmp);
+	SDL_QueryTexture(title_logo, NULL,NULL, &tex_w, &tex_h);
+	rect_title.w = scr_w * 0.8f;
+	rect_title.h = rect_title.w*tex_h / tex_w;
+	rect_title.x = (scr_w-rect_title.w)/2;
+	rect_title.y = scr_h * 0.55f - rect_title.h / 2;
 	tmp = IMG_Load((string(curr_dir) + "\\data\\bar_line.png").c_str());
 	bar_line = SDL_CreateTextureFromSurface(render, tmp);
 	SDL_FreeSurface(tmp);
@@ -453,7 +459,6 @@ void Gamemain::init(){
 			SDL_FreeSurface(tmp);
 		}
 	}
-	int tex_w, tex_h;
 	for (int i = 0; i < 3; i++) {
 		SDL_QueryTexture(ln[0][i], NULL, NULL, &tex_w, &tex_h);
 		size_ln[i] = float(tex_w) / float(tex_h);
@@ -554,6 +559,8 @@ int Gamemain::loop() {//quit when you don't return 0
 
 	SDL_SetRenderDrawColor(render, 0x33, 0x33, 0x33, SDL_ALPHA_OPAQUE);
 	SDL_RenderClear(render);
+	bg_1.draw();
+	bg_2.draw();
 	SDL_RenderCopy(render, border, NULL, NULL);
 
 	switch (mode) {
