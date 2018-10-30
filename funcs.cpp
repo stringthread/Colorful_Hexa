@@ -40,17 +40,17 @@ void Timer::close(){
 
 //QR_Reader
 int QR_Reader::init(string curr_dir) {
-	//zbar = _popen((curr_dir+"\\zbarcam").c_str(), "w");
+	zbar = _popen((curr_dir+"\\zbarcam").c_str(), "r");
 	return 0;
 }
 bool QR_Reader::read(){
-	/*fgets(buff, sizeof(buff), zbar);
+	fgets(buff, sizeof(buff), zbar);
 	tmp_str = string(buff);
 	if (tmp_str != "") {
 		if (tmp_str.find("https://") != 0 || tmp_str.compare(tmp_str.size() - 4, 4, userid) == 0)return false;
 		userid = tmp_str.substr(tmp_str.size() - 4, 4);
 		return true;
-	}*/
+	}
 	return false;
 }
 void QR_Reader::reset(){
@@ -80,7 +80,7 @@ int QR_Reader::send(int score){
 }
 void QR_Reader::callback(char* ptr, size_t size, size_t nmemb, string* stream){}
 void QR_Reader::close(){
-	//_pclose(zbar);
+	_pclose(zbar);
 }
 
 //BMS_Manager
