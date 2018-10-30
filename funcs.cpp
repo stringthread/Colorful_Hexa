@@ -39,14 +39,49 @@ void Timer::close(){
 }
 
 //QR_Reader
-int QR_Reader::init() {
+int QR_Reader::init(string curr_dir) {
+	//zbar = _popen((curr_dir+"\\zbarcam").c_str(), "w");
 	return 0;
 }
 bool QR_Reader::read(){
+	/*fgets(buff, sizeof(buff), zbar);
+	tmp_str = string(buff);
+	if (tmp_str != "") {
+		if (tmp_str.find("https://") != 0 || tmp_str.compare(tmp_str.size() - 4, 4, userid) == 0)return false;
+		userid = tmp_str.substr(tmp_str.size() - 4, 4);
+		return true;
+	}*/
 	return false;
 }
-void QR_Reader::reset(){}
-void QR_Reader::close(){}
+void QR_Reader::reset(){
+	userid = "";
+	return;
+}
+int QR_Reader::send(int score){
+	/*CURL *curl;
+	CURLcode res;
+	curl = curl_easy_init();
+	string chunk,url,post_data;
+	post_data = "mode=set&attrac=musicgame&score=";
+	if (curl)
+	{
+		curl_easy_setopt(curl, CURLOPT_URL, "https://tk67ennichi.official.jp/card/database.php");
+		curl_easy_setopt(curl, CURLOPT_POST, 1);
+		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post_data);
+		curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, post_data.size());
+		curl_easy_setopt(curl, CURLOPT_PROXY, "");
+		res = curl_easy_perform(curl);
+		curl_easy_cleanup(curl);
+	}
+	if (res != CURLE_OK) {
+		return -1;
+	}*/
+	return 0;
+}
+void QR_Reader::callback(char* ptr, size_t size, size_t nmemb, string* stream){}
+void QR_Reader::close(){
+	//_pclose(zbar);
+}
 
 //BMS_Manager
 BMS_Manager::BMS_Manager(SDL_Renderer* render) {

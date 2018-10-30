@@ -22,7 +22,10 @@ void Gamemain::change_mode() {
 			play_start = timer->get_time()-play_time;
 			mode = M_PLAY;
 			break;
-		case M_PLAY:mode = M_RESULT; break;
+		case M_PLAY:
+			Mix_HaltChannel(-1);
+			mode = M_RESULT;
+			break;
 		case M_RESULT:
 			Mix_HaltChannel(-1);
 			bmsm.reset();
@@ -289,8 +292,8 @@ int Gamemain::play(){
 		if (notes[i].size() == 0)continue;
 		for (int j = 0; j < notes[i].size(); j++) {
 			if (i == 0 && !notes[i][j].pushed) {
-				if (notes[i][j].get_count()<=bmsm.time_to_count(play_time)) {
-					if (bmsm.time_to_count(play_time/*-120l*/) < 2 * bmsm.BAR_STANDARD) {
+				if (notes[i][j].get_count()<=bmsm.time_to_count(play_time-latency2)) {
+					if (bmsm.time_to_count(play_time-latency1) < 2 * bmsm.BAR_STANDARD) {
 						ch = Mix_GroupAvailable(7);
 						if (ch != -1)goto play;
 					}
@@ -394,8 +397,58 @@ int Gamemain::play(){
 
 int Gamemain::result(){
 	if (any_pressed() && !qr.read())change_mode();
-	SDL_SetRenderDrawColor(render, 0xaa, 0xff, 0xaa, SDL_ALPHA_OPAQUE);
-	SDL_RenderClear(render);
+	for (rank = 0; rank < 9; rank++) {
+		if (score >= range_rank[rank])break;
+	}
+	s_letter = TTF_RenderUTF8_Blended(font, ("Score: "+digit((int)score,6)).c_str(), f_color);
+	letter = SDL_CreateTextureFromSurface(render, s_letter);
+	SDL_FreeSurface(s_letter);
+	SDL_QueryTexture(letter, NULL, NULL, &tex_w, &tex_h);
+	rect_res_score.w = rect_res_score.h*tex_w / tex_h;
+	rect_res_score.x = (scr_w - rect_res_score.w) / 2;
+	SDL_RenderCopy(render, letter, NULL, &rect_res_score);
+	SDL_DestroyTexture(letter);
+	SDL_RenderCopy(render, letter_rank[rank], NULL, &rect_rank);
+	s_letter = TTF_RenderUTF8_Blended(font, ("Max Combo: " + digit((int)max_combo, 3)).c_str(), f_color);
+	letter = SDL_CreateTextureFromSurface(render, s_letter);
+	SDL_FreeSurface(s_letter);
+	SDL_QueryTexture(letter, NULL, NULL, &tex_w, &tex_h);
+	rect_res_combo.w = rect_res_combo.h*tex_w / tex_h;
+	rect_res_combo.x = (scr_w - rect_res_combo.w) / 2;
+	SDL_RenderCopy(render, letter, NULL, &rect_res_combo);
+	SDL_DestroyTexture(letter);
+	s_letter = TTF_RenderUTF8_Blended(font, ("Perfect: " + digit((int)judge[0], 3)).c_str(), f_color);
+	letter = SDL_CreateTextureFromSurface(render, s_letter);
+	SDL_FreeSurface(s_letter);
+	SDL_QueryTexture(letter, NULL, NULL, &tex_w, &tex_h);
+	rect_perfect.w = rect_perfect.h*tex_w / tex_h;
+	rect_perfect.x = (scr_w - rect_perfect.w) / 2;
+	SDL_RenderCopy(render, letter, NULL, &rect_perfect);
+	SDL_DestroyTexture(letter);
+	s_letter = TTF_RenderUTF8_Blended(font, ("Great: " + digit((int)judge[1], 3)).c_str(), f_color);
+	letter = SDL_CreateTextureFromSurface(render, s_letter);
+	SDL_FreeSurface(s_letter);
+	SDL_QueryTexture(letter, NULL, NULL, &tex_w, &tex_h);
+	rect_great.w = rect_great.h*tex_w / tex_h;
+	rect_great.x = (scr_w - rect_great.w) / 2;
+	SDL_RenderCopy(render, letter, NULL, &rect_great);
+	SDL_DestroyTexture(letter);
+	s_letter = TTF_RenderUTF8_Blended(font, ("Good: " + digit((int)judge[2], 3)).c_str(), f_color);
+	letter = SDL_CreateTextureFromSurface(render, s_letter);
+	SDL_FreeSurface(s_letter);
+	SDL_QueryTexture(letter, NULL, NULL, &tex_w, &tex_h);
+	rect_good.w = rect_good.h*tex_w / tex_h;
+	rect_good.x = (scr_w - rect_good.w) / 2;
+	SDL_RenderCopy(render, letter, NULL, &rect_good);
+	SDL_DestroyTexture(letter);
+	s_letter = TTF_RenderUTF8_Blended(font, ("Miss: " + digit((int)judge[3], 3)).c_str(), f_color);
+	letter = SDL_CreateTextureFromSurface(render, s_letter);
+	SDL_FreeSurface(s_letter);
+	SDL_QueryTexture(letter, NULL, NULL, &tex_w, &tex_h);
+	rect_miss.w = rect_miss.h*tex_w / tex_h;
+	rect_miss.x = (scr_w - rect_miss.w) / 2;
+	SDL_RenderCopy(render, letter, NULL, &rect_miss);
+	SDL_DestroyTexture(letter);
 	//draw result screen
 	return 0;
 }
@@ -408,7 +461,6 @@ void Gamemain::init(){
 	font = TTF_OpenFont((curr_dir + "\\font\\font.ttf").c_str(), 200);
 	//font
 
-	int tex_w, tex_h;
 	rect_btn[0].x = scr_w / 2; rect_btn[0].y = int(0.35f*scr_h); rect_btn[0].w = int(0.15f*scr_w); rect_btn[0].h = int(0.1125f*scr_h);
 	rect_btn[1].x = int(0.575f*scr_w); rect_btn[1].y = int(0.425f*scr_h); rect_btn[1].w = int(0.075f*scr_w); rect_btn[1].h = int(0.15f*scr_h);
 	rect_btn[2].x = rect_btn[0].x; rect_btn[2].y = int(0.5375f*scr_h); rect_btn[2].w = rect_btn[0].w; rect_btn[2].h = rect_btn[0].h;
@@ -501,6 +553,11 @@ void Gamemain::init(){
 	SDL_QueryTexture(letter_timing[0], NULL, NULL, &tex_w, &tex_h);
 	rect_timing.h = rect_timing.w*tex_h / tex_w;
 	rect_timing.y = scr_h / 2;
+	for (int i = 0; i < 9; i++) {
+		tmp = IMG_Load((curr_dir + "\\data\\rank_" + to_string(i) + ".png").c_str());
+		letter_rank[i] = SDL_CreateTextureFromSurface(render, tmp);
+		SDL_FreeSurface(tmp);
+	}
 	//image
 
 	bgm_ready = Mix_LoadWAV((curr_dir + "\\data\\bgm_ready.wav").c_str());
@@ -517,6 +574,7 @@ void Gamemain::init(){
 	Mix_GroupChannels(62, 71, 7);//for long sound
 	//group for bgm
 	//mixer
+	qr.init(curr_dir);
 
 	timer->start();
 }
