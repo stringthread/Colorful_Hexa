@@ -41,33 +41,42 @@ void Timer::close(){
 //QR_Reader
 int QR_Reader::init(string curr_dir) {
 	zbar = _popen((curr_dir+"\\zbarcam").c_str(), "r");
+	inited = true;
 	return 0;
 }
-bool QR_Reader::read(){
-	fgets(buff, sizeof(buff), zbar);
-	tmp_str = string(buff);
-	if (tmp_str != "") {
-		if (tmp_str.find("https://") != 0 || tmp_str.compare(tmp_str.size() - 4, 4, userid) == 0)return false;
-		userid = tmp_str.substr(tmp_str.size() - 4, 4);
-		return true;
-	}
-	return false;
+void QR_Reader::read_start(){
+	timer.start();
+	timer.set_frametime(2000);
+	reading = true;
+	auto th = thread([this] {
+		while (1) {
+			timer.sleep();
+			if (!inited || read)continue;
+			fgets(buff, sizeof(buff), zbar);
+			tmp_str = string(buff);
+			if (tmp_str==""||tmp_str.find("https://") == string::npos || tmp_str.compare(tmp_str.size() - 4, 4, userid) == 0)continue;
+			userid = tmp_str.substr(tmp_str.size() - 55, 4);
+			read = true;
+			break;
+		}
+	});
+	th.detach();
 }
 void QR_Reader::reset(){
 	userid = "";
 	return;
 }
 int QR_Reader::send(int score){
-	/*CURL *curl;
-	CURLcode res;
 	curl = curl_easy_init();
 	string chunk,url,post_data;
-	post_data = "mode=set&attrac=musicgame&score=";
-	if (curl)
-	{
-		curl_easy_setopt(curl, CURLOPT_URL, "https://tk67ennichi.official.jp/card/database.php");
+	//url = "https://tk67ennichi.official.jp/card/database.php";
+	//post_data = "mode=set&attrac=musicgame&score=";
+	url = "http://localhost/test/test.php";
+	post_data = "test=qwerty";
+	if (curl){
+		curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
 		curl_easy_setopt(curl, CURLOPT_POST, 1);
-		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post_data);
+		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post_data.c_str());
 		curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, post_data.size());
 		curl_easy_setopt(curl, CURLOPT_PROXY, "");
 		res = curl_easy_perform(curl);
@@ -75,10 +84,42 @@ int QR_Reader::send(int score){
 	}
 	if (res != CURLE_OK) {
 		return -1;
-	}*/
+	}
 	return 0;
 }
-void QR_Reader::callback(char* ptr, size_t size, size_t nmemb, string* stream){}
+void QR_Reader::check_hidden(bool hidden[2]) {
+	curl = curl_easy_init();
+	string chunk, url,post_data, ret;
+	//url = "https://tk67ennichi.official.jp/enpass/database.php";
+	//post_data = "mode=---&password=torisasamiyukke&id="+userid;
+	url = "http://localhost/test/test.php";
+	post_data = "test=qwerty";
+	if (curl)
+	{
+		curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+		curl_easy_setopt(curl, CURLOPT_POST, 1);
+		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post_data.c_str());
+		curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, post_data.size());
+		curl_easy_setopt(curl, CURLOPT_WRITEDATA, &ret);
+		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, callback);
+		curl_easy_setopt(curl, CURLOPT_PROXY, "");
+		res = curl_easy_perform(curl);
+		curl_easy_cleanup(curl);
+	}
+	if (res != CURLE_OK) {
+		if (err_count < 5)check_hidden(hidden);
+		else err_count = 0;
+		return;
+	}
+	//hidden[0] = (ret == "2" || ret == "3");
+	//hidden[1] = (ret == "1" || ret == "3");
+	err_count = 0;
+	return;
+}
+size_t QR_Reader::callback(char* ptr, size_t size, size_t nmemb, string* stream){
+	*stream = string(ptr);
+	return size*nmemb;
+}
 void QR_Reader::close(){
 	_pclose(zbar);
 }
@@ -317,7 +358,7 @@ int BMS_Manager::load_music(SDL_Renderer *render){
 			if (data[i] == "00")continue;
 			if (channel < 15) {
 				music[channel].emplace_back(data[i], bar_no, (long)(bar_count[(bar_no == 0) ? 0 : (bar_no - 1)] + i * (bar_count[bar_no] - bar_count[(bar_no == 0) ? 0 : (bar_no - 1)]) / data.size()));
-				num_note++;
+				if (channel!=0&&channel!=14)num_note++;
 			}
 			//for normal notes
 

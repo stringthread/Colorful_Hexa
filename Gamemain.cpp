@@ -18,7 +18,7 @@ void Gamemain::change_mode() {
 			break;
 		case M_LOADING:
 			Mix_PlayChannel(-1, bgm_ready, 0);
-			play_time = -5000l;
+			play_time = -4000l;
 			play_start = timer->get_time()-play_time;
 			mode = M_PLAY;
 			break;
@@ -60,7 +60,7 @@ void Gamemain::calc_score() {
 	colors = (int)colorful_gauge;
 	if(colorful_gauge>=6.0f){
 	colorful_gauge=6.0f;
-	colors = 5;
+	//colors = 5;
 	}
 	//*///color back
 }
@@ -181,7 +181,12 @@ string Gamemain::digit(float data, int n) {
 
 int Gamemain::title(){
 	if (bmsm.header_loaded) {
-		if (any_pressed() || qr.read()) {
+		if (!qr.inited) {
+			auto th = thread([this]{ qr.init(curr_dir); });
+			th.detach();
+		} else if (!qr.reading && !qr.read)qr.read_start();
+		if (any_pressed() || qr.read) {
+			if (qr.read)qr.check_hidden(&bmsm.hidden[0]);
 			change_mode();
 		}
 		SDL_RenderCopyAlpha(render, title_logo, NULL, &rect_title, 180 + 75 * cos(0.001*timer->get_time()));
@@ -270,16 +275,9 @@ int Gamemain::choose(){
 int Gamemain::loading() {
 	if (bmsm.music_loaded) {
 		unit_col_gauge = 12.0f/bmsm.get_num_note();
-		if (any_pressed()) {
-			bmsm.music_loaded = false;
-			change_mode();
-		}
-		SDL_SetRenderDrawColor(render, 0xff, 0xaa, 0xaa,SDL_ALPHA_OPAQUE);
-		SDL_RenderClear(render);
+		bmsm.music_loaded = false;
+		change_mode();
 		//draw play start screen
-	}else{
-
-		//draw loading screen
 	}
 	return 0;
 }
@@ -371,7 +369,7 @@ int Gamemain::play(){
 
 	for (int i= 0; i <= 6; i++) {
 		for (int j = 0; j < notes[i+1].size(); j++) {
-			draw_note(notes[i+1][j].get_count(),i,colors,notes[i+1][j].get_end_count(),i==6);
+			draw_note(notes[i+1][j].get_count(),i,(colors==6)?i-1:colors,notes[i+1][j].get_end_count(),i==6);
 		}
 		if (i == 6)continue;
 		SDL_RenderCopy(render,(input[i] > 0) ? btn_p[i] : btn[i], NULL,  &rect_btn[i]);
@@ -396,8 +394,8 @@ int Gamemain::play(){
 }
 
 int Gamemain::result(){
-	if (any_pressed() && !qr.read())change_mode();
-	for (rank = 0; rank < 9; rank++) {
+	if (any_pressed())change_mode();
+	for (rank = 0; rank < 8; rank++) {
 		if (score >= range_rank[rank])break;
 	}
 	s_letter = TTF_RenderUTF8_Blended(font, ("Score: "+digit((int)score,6)).c_str(), f_color);
@@ -574,7 +572,6 @@ void Gamemain::init(){
 	Mix_GroupChannels(62, 71, 7);//for long sound
 	//group for bgm
 	//mixer
-	qr.init(curr_dir);
 
 	timer->start();
 }
