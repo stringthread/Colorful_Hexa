@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include "ColorfulHexa.h"
 #include <mmsystem.h>
-#include <fstream>
 
 //Timer
 void Timer::start(){
@@ -55,7 +54,7 @@ void QR_Reader::read_start(){
 			fgets(buff, sizeof(buff), zbar);
 			tmp_str = string(buff);
 			if (tmp_str==""||tmp_str.find("https://") == string::npos || tmp_str.compare(tmp_str.size() - 4, 4, userid) == 0)continue;
-			userid = tmp_str.substr(tmp_str.size() - 55, 4);
+			userid = tmp_str.substr(tmp_str.size() - 5, 4);
 			read = true;
 			break;
 		}
@@ -64,20 +63,23 @@ void QR_Reader::read_start(){
 }
 void QR_Reader::reset(){
 	userid = "";
+	read = false;
 	return;
 }
-int QR_Reader::send(int score){
+int QR_Reader::send(int rank,int song,int score){
 	curl = curl_easy_init();
 	string chunk,url,post_data;
-	//url = "https://tk67ennichi.official.jp/card/database.php";
-	//post_data = "mode=set&attrac=musicgame&score=";
-	url = "http://localhost/test/test.php";
-	post_data = "test=qwerty";
+	url = "http://tk67ennichi.official.jp/enpass/database.php";
+	post_data = "mode=set&id="+userid+"&password=torisasamiyukke&attrac=colorfulhexa&score_mode="+to_string(rank)+"&song="+to_string(song)+"&score="+to_string(score);
+	//url = "http://localhost/test/test.php";
+	//post_data = "test=qwerty";
 	if (curl){
 		curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
 		curl_easy_setopt(curl, CURLOPT_POST, 1);
 		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post_data.c_str());
 		curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, post_data.size());
+		curl_easy_setopt(curl, CURLOPT_WRITEDATA, &data);
+		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, callback_send);
 		curl_easy_setopt(curl, CURLOPT_PROXY, "");
 		res = curl_easy_perform(curl);
 		curl_easy_cleanup(curl);
@@ -87,37 +89,41 @@ int QR_Reader::send(int score){
 	}
 	return 0;
 }
+size_t QR_Reader::callback_send(char* ptr, size_t size, size_t nmemb, bool* stream) {
+	return size * nmemb;
+}
 void QR_Reader::check_hidden(bool hidden[2]) {
 	curl = curl_easy_init();
-	string chunk, url,post_data, ret;
-	//url = "https://tk67ennichi.official.jp/enpass/database.php";
-	//post_data = "mode=---&password=torisasamiyukke&id="+userid;
-	url = "http://localhost/test/test.php";
-	post_data = "test=qwerty";
+	string chunk, url,post_data;
+	url = "http://tk67ennichi.official.jp/enpass/database.php";
+	post_data = "mode=special_song&id="+userid;
+	//url = "http://localhost/test/test.php";
+	//post_data = "test=qwerty";
 	if (curl)
 	{
 		curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
 		curl_easy_setopt(curl, CURLOPT_POST, 1);
 		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post_data.c_str());
 		curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, post_data.size());
-		curl_easy_setopt(curl, CURLOPT_WRITEDATA, &ret);
+		curl_easy_setopt(curl, CURLOPT_WRITEDATA, &hidden[0]);
 		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, callback);
 		curl_easy_setopt(curl, CURLOPT_PROXY, "");
 		res = curl_easy_perform(curl);
 		curl_easy_cleanup(curl);
 	}
 	if (res != CURLE_OK) {
+		err_count++;
 		if (err_count < 5)check_hidden(hidden);
 		else err_count = 0;
 		return;
 	}
-	//hidden[0] = (ret == "2" || ret == "3");
-	//hidden[1] = (ret == "1" || ret == "3");
 	err_count = 0;
 	return;
 }
-size_t QR_Reader::callback(char* ptr, size_t size, size_t nmemb, string* stream){
-	*stream = string(ptr);
+size_t QR_Reader::callback(char* ptr, size_t size, size_t nmemb, bool* stream){
+	string ret = string(ptr);
+	stream[0] = (ret == "2" || ret == "3");
+	stream[1] = (ret == "1" || ret == "3");
 	return size*nmemb;
 }
 void QR_Reader::close(){
@@ -185,6 +191,7 @@ int BMS_Manager::Header::load(string dir,string file,bool is_first,SDL_Renderer*
 	bmsfile.push_back(file);
 	ifstream ifs(bmsfile.back());
 	string line,data;
+	SDL_Surface* tmp;
 	bool has_total=false;
 
 	bar_num.push_back(1);
@@ -194,13 +201,12 @@ int BMS_Manager::Header::load(string dir,string file,bool is_first,SDL_Renderer*
 	num++;
 	while(getline(ifs,line)){
 		if (line[0] != '#')continue;
-		line=regex_replace(line, regex(" \t"), "");
 		if (regex_search(line, regex("^#[0-9]{5}"))) {
 			if (stoi(line.substr(1, 3)) > bar_num.back())bar_num.back() = stoi(line.substr(1, 3))+1;
 		}
 		has_total = false;
-		for (int i= 0; i < 10; i++) {
-			if (!is_first && (i == 0 || i == 1 || i == 2 || i == 4 || i == 7 || i == 9))continue;
+		for (int i= 0; i < 12; i++) {
+			if (!is_first && (i == 0 || i == 1 || i == 2 || i == 4 || i == 7 || i == 9||i==11))continue;
 			if (!regex_search(line, regex("^#" + cmd[i] + "[ \t]+")))continue;
 			data = regex_replace(line,regex("^#[^ \t]+[ \t]+"),"");
 			switch (i) {
@@ -233,9 +239,15 @@ int BMS_Manager::Header::load(string dir,string file,bool is_first,SDL_Renderer*
 				has_total = true;
 				break;
 			case 9:
-				SDL_Surface* tmp = IMG_Load((dir + data).c_str());
+				tmp = IMG_Load((dir + data).c_str());
 				stagefile = SDL_CreateTextureFromSurface(render,tmp);
 				SDL_FreeSurface(tmp);
+				break;
+			case 10:
+				notesdesigner = data;
+				break;
+			case 11:
+				bgm = Mix_LoadWAV((dir + data).c_str());
 				break;
 			}
 		}
@@ -343,7 +355,7 @@ int BMS_Manager::load_music(SDL_Renderer *render){
 
 		string tmp_data = line.substr(7);
 		data.clear();
-		if (channel == 2)data.push_back(tmp_data);
+		if (channel == 2)data.push_back(to_string(stoi(tmp_data,NULL,16)));
 		else {
 			while (tmp_data.length() > 2) {
 				data.push_back(tmp_data.substr(0, 2));
@@ -358,7 +370,7 @@ int BMS_Manager::load_music(SDL_Renderer *render){
 			if (data[i] == "00")continue;
 			if (channel < 15) {
 				music[channel].emplace_back(data[i], bar_no, (long)(bar_count[(bar_no == 0) ? 0 : (bar_no - 1)] + i * (bar_count[bar_no] - bar_count[(bar_no == 0) ? 0 : (bar_no - 1)]) / data.size()));
-				if (channel!=0&&channel!=14)num_note++;
+				if (channel!=0&&channel!=2&&channel!=14)num_note++;
 			}
 			//for normal notes
 
@@ -433,7 +445,7 @@ void BMS_Manager::set_time_bpm_change() {
 	long time = 0l;
 	for (int i=1;i<music[2].size();i++){
 		time = time_bpm_change[i - 1];
-		time += (long)((music[2][i].get_count() - music[2][i - 1].get_count())/BAR_STANDARD*4/float(stol(music[2][i].get_data(),NULL,16))*60000);//ms
+		time += (long)((music[2][i].get_count() - music[2][i - 1].get_count())/BAR_STANDARD*4/float(stol(music[2][i].get_data()))*60000);//ms
 		time_bpm_change.push_back(time);
 	}
 	return;
@@ -444,7 +456,100 @@ long BMS_Manager::time_to_count(long time) {
 	for (i= 0;i<time_bpm_change.size()-1; i++) {
 		if (time_bpm_change[i+1] > time)break;
 	}
-	return music[2][i].get_count() + long(double(stol(music[2][i].get_data(),NULL,16))/60.0*double(time - time_bpm_change[i])/1000.0*double(BAR_STANDARD)/4.0);
+	return music[2][i].get_count() + long(double(stol(music[2][i].get_data()))/60.0*double(time - time_bpm_change[i])/1000.0*double(BAR_STANDARD)/4.0);
+}
+
+void Letter_Scroll::init(SDL_Renderer *a_render, TTF_Font *a_font, SDL_Color a_color, const SDL_Rect *a_dst, string a_str, float f_vel) {
+	render = a_render;
+	font = a_font;
+	color = a_color;
+	org_dst=dst = *a_dst;
+	str = a_str;
+	SDL_Surface *sur;
+	sur = TTF_RenderText_Blended(font, str.c_str(), color);
+	tex = SDL_CreateTextureFromSurface(render, sur);
+	SDL_FreeSurface(sur);
+	SDL_QueryTexture(tex, NULL, NULL, &tex_w, &tex_h);
+	src.h = tex_h;
+	src.w = min(tex_w, tex_h*dst.w / dst.h);
+	scroll = tex_w > tex_h*dst.w / dst.h;
+	if (!scroll) {
+		dst.w = tex_h * dst.w / dst.h;
+		dst.x = org_dst.x + (org_dst.w - dst.w) / 2;
+	}
+	rate_v = f_vel;
+	v = (int)(src.h*f_vel);
+}
+void Letter_Scroll::set_text(string a_str) {
+	SDL_Surface *sur;
+	str = a_str;
+	sur = TTF_RenderText_Blended(font, str.c_str(), color);
+	tex = SDL_CreateTextureFromSurface(render, sur);
+	SDL_FreeSurface(sur);
+	SDL_QueryTexture(tex, NULL, NULL, &tex_w, &tex_h);
+	dst = org_dst;
+	dst_w = dst.w;
+	src.h = tex_h;
+	src.w = min(tex_w, tex_h*dst.w / dst.h);
+	scroll = tex_w > tex_h*dst.w / dst.h;
+	if (!scroll) {
+		dst.w = dst.h*tex_w / tex_h;
+		dst.x = org_dst.x + (org_dst.w - dst.w) / 2;
+	}
+	v = (int)(src.h*rate_v);
+	src.x = 0;
+}
+void Letter_Scroll::draw(){
+	if (scroll) {
+		if (src.x + src.w > tex_w) {
+			dst_w -= float(v)*org_dst.w/src.w;
+			dst.w = (int)dst_w;
+			src.x += v;
+			if(dst.w<0){
+				src.x = 0;
+				dst = org_dst;
+				dst_w = dst.w;
+			}
+		}
+		else src.x += v;
+	}
+	SDL_RenderCopy(render, tex, &src, &dst);
+}
+void Letter_Scroll::close(){
+	SDL_DestroyTexture(tex);
+}
+
+void Text_Draw::set_left(string a_text, int x, int y, unsigned int h,const SDL_Color col) {
+	SDL_Surface *sur;
+	text = a_text;
+	sur = TTF_RenderText_Blended(font, text.c_str(), col);
+	tex = SDL_CreateTextureFromSurface(render,sur);
+	SDL_FreeSurface(sur);
+	int tex_w, tex_h;
+	SDL_QueryTexture(tex, NULL, NULL, &tex_w, &tex_h);
+	rect.x = x;
+	rect.y = y;
+	rect.h = h;
+	rect.w = h * tex_w / tex_h;
+}
+void Text_Draw::set_center(string a_text, int x_cen, int y_cen, unsigned int h, const SDL_Color col) {
+	SDL_Surface *sur;
+	text = a_text;
+	sur = TTF_RenderText_Blended(font, text.c_str(), col);
+	tex = SDL_CreateTextureFromSurface(render, sur);
+	SDL_FreeSurface(sur);
+	int tex_w, tex_h;
+	SDL_QueryTexture(tex, NULL, NULL, &tex_w, &tex_h);
+	rect.h = h;
+	rect.w = h * tex_w / tex_h;
+	rect.x = x_cen - rect.w / 2;
+	rect.y = y_cen - rect.h / 2;
+}
+void Text_Draw::draw() {
+	SDL_RenderCopy(render, tex, NULL, &rect);
+}
+void Text_Draw::close() {
+	SDL_DestroyTexture(tex);
 }
 
 //algorithms

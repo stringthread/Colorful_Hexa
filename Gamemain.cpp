@@ -8,12 +8,15 @@
 void Gamemain::change_mode() {
 	switch (mode) {
 		case M_TITLE:
+			//Mix_HaltMusic();
+			//bmsm.play_bgm();
 			mode = M_CHOOSE;
 			break;
 		case M_CHOOSE:
 			t_load = thread([this]() {bmsm.load_music(render);});
 			t_load.detach();
 			step_choose = 0;
+			Mix_HaltMusic();
 			mode = M_LOADING;
 			break;
 		case M_LOADING:
@@ -24,12 +27,14 @@ void Gamemain::change_mode() {
 			break;
 		case M_PLAY:
 			Mix_HaltChannel(-1);
+			Mix_PlayMusic(bgm_result, -1);
 			mode = M_RESULT;
 			break;
 		case M_RESULT:
 			Mix_HaltChannel(-1);
 			bmsm.reset();
 			qr.reset();
+			qr.read_start();
 			pushing_long.fill(0);
 			judge.fill(0);
 			score = 0;
@@ -38,6 +43,7 @@ void Gamemain::change_mode() {
 			colors = 0;
 			colorful_gauge = 0.0f;
 			curr_judge = -1;
+			Mix_PlayMusic(bgm_title, -1);
 			mode = M_TITLE;
 			break;
 	}
@@ -125,12 +131,12 @@ void Gamemain::draw_note(long count,int lane,int color,long end_count,bool is_ba
 }
 
 bool Gamemain::check_judge(long count,bool add_judge,int *judge_container) {
-	long now_count = bmsm.time_to_count(play_time/*-250*/);//projectior
+	long now_count = bmsm.time_to_count(play_time-latency1);
 	long judge_count[4] = {
-		bmsm.time_to_count(play_time + R_PERFECT * 1000 / FPS) - now_count,
-		bmsm.time_to_count(play_time + R_GREAT * 1000 / FPS) - now_count,
-		bmsm.time_to_count(play_time + R_GOOD * 1000 / FPS) - now_count,
-		bmsm.time_to_count(play_time + R_MISS * 1000 / FPS) - now_count,
+		bmsm.time_to_count(play_time-latency1 + R_PERFECT * 1000 / FPS) - now_count,
+		bmsm.time_to_count(play_time-latency1 + R_GREAT * 1000 / FPS) - now_count,
+		bmsm.time_to_count(play_time-latency1 + R_GOOD * 1000 / FPS) - now_count,
+		bmsm.time_to_count(play_time-latency1 + R_MISS * 1000 / FPS) - now_count,
 	};
 	long dis_count = abs(count - now_count);
 	curr_timing=T_NONE;
@@ -189,7 +195,8 @@ int Gamemain::title(){
 			if (qr.read)qr.check_hidden(&bmsm.hidden[0]);
 			change_mode();
 		}
-		SDL_RenderCopyAlpha(render, title_logo, NULL, &rect_title, 180 + 75 * cos(0.001*timer->get_time()));
+		if(Mix_PlayingMusic()==0)Mix_PlayMusic(bgm_title, -1);
+		SDL_RenderCopyAlpha(render, title_logo, NULL, &rect_title_logo, 180 + 75 * cos(0.001*timer->get_time()));
 		//draw title screen
 	} else {
 		SDL_SetRenderDrawColor(render, 0xff, 0xaa, 0xff, SDL_ALPHA_OPAQUE);
@@ -200,74 +207,105 @@ int Gamemain::title(){
 }
 
 int Gamemain::choose(){
-	SDL_RenderCopy(render,bmsm.get_stagefile(),NULL,&rect_stagefile);
-	switch (step_choose) {
-		case 0:
-			if (input[0] == -1 || input[5] == -1)step_choose++;
-			if (input[1]==1 || (input[1] >= 60 && (input[1] - 60) % 20 == 0)) {
-				bmsm.change_sel(1);
-			}
-			if (input[4]==1 || (input[4] >= 60 && (input[4] - 60) % 20 == 0)) bmsm.change_sel(-1);
-			
-			SDL_RenderCopyAlpha(render, bmsm.get_stagefile(-1), NULL, &rect_l,180);
-			SDL_RenderCopyAlpha(render, bmsm.get_stagefile(1), NULL, &rect_r, 180);
-			//draw choose song screen
-			break;
-			//choose song
-		case 1:
-			if (input[2] == -1 || input[3] == -1) {
-				bmsm.reset_lv();
-				bmsm.reset_speed();
-				step_choose--;
-			}
-			if (input[0] == -1 || input[5] == -1)step_choose++;
-			if (input[1]==1 || (input[1] >= 60 && (input[1] - 60) % 20 == 0)) bmsm.change_lv(1);
-			if (input[4]==1 || (input[4] >= 60 && (input[4] - 60) % 20 == 0)) bmsm.change_lv(-1);
+	if (step_choose < 2) {
+		letter_title.draw();
+		composer.draw();
+		SDL_RenderCopy(render, bmsm.get_stagefile(), NULL, &rect_stagefile);
+		SDL_RenderCopy(render, bmsm.get_stagefile(-1), NULL, &rect_l);
+		SDL_RenderCopy(render, bmsm.get_stagefile(1), NULL, &rect_r);
+		SDL_RenderCopy(render, easy, NULL, &rect_easy);
+		SDL_RenderCopy(render, normal, NULL, &rect_normal);
+		SDL_RenderCopy(render, hard, NULL, &rect_hard);
+		lv_easy.draw();
+		lv_normal.draw();
+		lv_hard.draw();
+		notesdesigner.draw();
+	}
+	if (step_choose == 0){
+		if (input[0] == -1 || input[5] == -1)step_choose++;
+		SDL_RenderCopy(render, arr, NULL, &rect_arr_l_0);
+		SDL_RenderCopyEx(render, arr, NULL, &rect_arr_r_0, 0, NULL, SDL_FLIP_HORIZONTAL);
+		if (input[1] == 1 || (input[1] >= 60 && (input[1] - 60) % 20 == 0)) {
+			bmsm.change_sel(1);
+			letter_title.set_text(bmsm.get_title());
+			composer.set_text(bmsm.get_composer());
+			lv_easy.set_center(to_string(bmsm.get_playlevel(0)), p_lv_easy.x, p_lv_easy.y, scr_h*0.08f, f_color);
+			lv_normal.set_center(to_string(bmsm.get_playlevel(1)), p_lv_normal.x, p_lv_normal.y, scr_h*0.08f, f_color);
+			lv_hard.set_center(to_string(bmsm.get_playlevel(2)), p_lv_hard.x, p_lv_hard.y, scr_h*0.08f, f_color);
+			notesdesigner.set_text(bmsm.get_notesdesigner());
+			//Mix_HaltMusic();
+			//bmsm.play_bgm();
+		}
+		if (input[4] == 1 || (input[4] >= 60 && (input[4] - 60) % 20 == 0)) {
+			bmsm.change_sel(-1);
+			letter_title.set_text(bmsm.get_title());
+			composer.set_text(bmsm.get_composer());
+			lv_easy.set_center(to_string(bmsm.get_playlevel(0)), p_lv_easy.x, p_lv_easy.y, scr_h*0.08f, f_color);
+			lv_normal.set_center(to_string(bmsm.get_playlevel(1)), p_lv_normal.x, p_lv_normal.y, scr_h*0.08f, f_color);
+			lv_hard.set_center(to_string(bmsm.get_playlevel(2)), p_lv_hard.x, p_lv_hard.y, scr_h*0.08f, f_color);
+			notesdesigner.set_text(bmsm.get_notesdesigner());
+			//Mix_HaltMusic();
+			//bmsm.play_bgm();
+		}
+	}else if(step_choose==1){
+		if (input[2] == -1 || input[3] == -1)step_choose--;
+		if (input[0] == -1 || input[5] == -1)step_choose++;
+		SDL_RenderCopy(render, arr, NULL, &rect_arr_l[bmsm.get_lv()]);
+		SDL_RenderCopyEx(render, arr, NULL, &rect_arr_r[bmsm.get_lv()], 0, NULL, SDL_FLIP_HORIZONTAL);
+		if (input[1] == 1 || (input[1] >= 60 && (input[1] - 60) % 20 == 0)) {
+			bmsm.change_lv(1);
+		}
+		if (input[4] == 1 || (input[4] >= 60 && (input[4] - 60) % 20 == 0)) {
+			bmsm.change_lv(-1);
+		}
+	} else if (step_choose == 2) {
+		if (input[2] == -1 || input[3] == -1)step_choose--;
+		if (input[0] == -1 || input[5] == -1) {
+			step_choose++;
+			speed_conf.set_center("Speed: "+digit(bmsm.get_speed(),2),p_speed_conf.x,p_speed_conf.y,scr_h*0.05f,f_color);
+		}
+		if (input[1] == 1 || (input[1] >= 60 && (input[1] - 60) % 20 == 0)) bmsm.change_speed(0.25f);
+		if (input[4] == 1 || (input[4] >= 60 && (input[4] - 60) % 20 == 0)) bmsm.change_speed(-0.25f);
 
-			s_letter = TTF_RenderText_Blended(font, text_lv[bmsm.get_lv()].c_str(), f_color);
-			letter = SDL_CreateTextureFromSurface(render, s_letter);
-			SDL_FreeSurface(s_letter);
-			rect_center.w = rect_center.h * 2;
-			rect_center.x = (scr_w - rect_center.w) / 2;
-			SDL_RenderCopy(render, letter, NULL, &rect_center);
-			SDL_DestroyTexture(letter); s_letter = TTF_RenderText_Blended(font, to_string(bmsm.get_playlevel()).c_str(), f_color);
-			letter = SDL_CreateTextureFromSurface(render, s_letter);
-			SDL_FreeSurface(s_letter);
-			SDL_RenderCopy(render, letter, NULL, &rect_bottom);
-			SDL_DestroyTexture(letter);
-			//draw choose lv screen
+		SDL_RenderCopyAlpha(render, black_back, NULL, NULL,16);
+		cap_speed.draw();
+		s_letter = TTF_RenderText_Blended(font, digit(bmsm.get_speed(), 2).c_str(), f_color);
+		letter = SDL_CreateTextureFromSurface(render, s_letter);
+		SDL_FreeSurface(s_letter);
+		rect_center.w = rect_center.h*1.5f;
+		rect_center.x = (scr_w - rect_center.w) / 2;
+		SDL_RenderCopy(render, letter, NULL, &rect_center);
+		SDL_DestroyTexture(letter);
+		SDL_RenderCopy(render, arr, NULL, &rect_arr_l_0);
+		SDL_RenderCopyEx(render, arr, NULL, &rect_arr_r_0, 0, NULL, SDL_FLIP_HORIZONTAL);
+		//draw choose speed screen
+	}else if(step_choose==3){
+		if (input[2] == -1 || input[3] == -1) {
+			step_choose--;
+			return 0;
+		}
+		if (any_pressed()) {
+			step_choose = 0;
+			change_mode();//start loading data
+		}
+		letter_title.draw();
+		composer.draw();
+		SDL_RenderCopy(render, bmsm.get_stagefile(), NULL, &rect_stagefile);
+		switch (bmsm.get_lv()) {
+			case 0:
+			SDL_RenderCopy(render, easy, NULL, &rect_easy);
+			lv_easy.draw();
 			break;
-			//choose lv
-		case 2:
-			if (input[2] == -1 || input[3] == -1)step_choose--;
-			if (input[0] == -1 || input[5] == -1)step_choose++;
-			if (input[1]==1 || (input[1] >= 60 && (input[1] - 60) % 20 == 0)) bmsm.change_speed(0.25f);
-			if (input[4]==1 || (input[4] >= 60 && (input[4] - 60) % 20 == 0)) bmsm.change_speed(-0.25f);
-
-			s_letter = TTF_RenderText_Blended(font, digit(bmsm.get_speed(),2).c_str(), f_color);
-			letter = SDL_CreateTextureFromSurface(render, s_letter);
-			SDL_FreeSurface(s_letter);
-			rect_center.w = rect_center.h*1.5f;
-			rect_center.x = (scr_w - rect_center.w) / 2;
-			SDL_RenderCopy(render, letter, NULL, &rect_center);
-			SDL_DestroyTexture(letter);
-			//draw choose speed screen
+			case 1:
+			SDL_RenderCopy(render, normal, NULL, &rect_normal);
+			lv_normal.draw();
 			break;
-			//choose speed
-		case 3:
-			if (input[2] == -1 || input[3] == -1) {
-				step_choose--;
-				break;
-			}
-			if (any_pressed()) {
-				step_choose = 0;
-				change_mode();//start loading data
-				break;
-			}
-
-			//draw confirm screen
+			case 2:
+			SDL_RenderCopy(render, hard, NULL, &rect_hard);
+			lv_hard.draw();
 			break;
-			//confirm
+		}
+		speed_conf.draw();
 	}
 	return 0;
 }
@@ -338,6 +376,7 @@ int Gamemain::play(){
 						if (notes[i][j].is_ln() && pushing_long[i - 1])pushing_long[i - 1] = false;
 						else if (!notes[i][j].pushed) {
 							combo = 0;
+							judge[3]++;
 							colorful_gauge += unit_col_gauge*COL_GAUGE[3];
 							if (colorful_gauge < 0.0f)colorful_gauge = 0.0f;
 							curr_judge = 3;
@@ -358,7 +397,7 @@ int Gamemain::play(){
 		}
 	}
 	calc_score();
-	if (bmsm.get_total_count() < bmsm.time_to_count(play_time))change_mode();
+	if (bmsm.get_total_count() < bmsm.time_to_count(play_time-2000))change_mode();
 	//calculation
 
 	SDL_SetRenderDrawColor(render, COLOR_HEX[colors][0], COLOR_HEX[colors][1], COLOR_HEX[colors][2], SDL_ALPHA_OPAQUE);
@@ -369,7 +408,7 @@ int Gamemain::play(){
 
 	for (int i= 0; i <= 6; i++) {
 		for (int j = 0; j < notes[i+1].size(); j++) {
-			draw_note(notes[i+1][j].get_count(),i,(colors==6)?i-1:colors,notes[i+1][j].get_end_count(),i==6);
+			draw_note(notes[i+1][j].get_count(),i,(colors==6)?i:colors,notes[i+1][j].get_end_count(),i==6);
 		}
 		if (i == 6)continue;
 		SDL_RenderCopy(render,(input[i] > 0) ? btn_p[i] : btn[i], NULL,  &rect_btn[i]);
@@ -395,9 +434,24 @@ int Gamemain::play(){
 
 int Gamemain::result(){
 	if (any_pressed())change_mode();
+	if (qr.read) {
+		qr.send(bmsm.get_lv(),bmsm.get_sel(),score);
+		qr.reset();
+	}
 	for (rank = 0; rank < 8; rank++) {
 		if (score >= range_rank[rank])break;
 	}
+
+	s_letter = TTF_RenderUTF8_Blended(font, ("Lv."+digit((int)bmsm.get_playlevel(), 2)).c_str(), f_color);
+	letter = SDL_CreateTextureFromSurface(render, s_letter);
+	SDL_FreeSurface(s_letter);
+	SDL_RenderCopy(render, letter, NULL, &rect_score);
+	SDL_DestroyTexture(letter);
+	s_letter = TTF_RenderUTF8_Blended(font, text_lv[bmsm.get_lv()].c_str(), f_color);
+	letter = SDL_CreateTextureFromSurface(render, s_letter);
+	SDL_FreeSurface(s_letter);
+	SDL_RenderCopy(render, letter, NULL, &rect_lv_res);
+	SDL_DestroyTexture(letter);
 	s_letter = TTF_RenderUTF8_Blended(font, ("Score: "+digit((int)score,6)).c_str(), f_color);
 	letter = SDL_CreateTextureFromSurface(render, s_letter);
 	SDL_FreeSurface(s_letter);
@@ -452,11 +506,12 @@ int Gamemain::result(){
 }
 
 void Gamemain::init(){
+	SDL_Surface* tmp = NULL;
 	TTF_Init();
 	char c_curr_dir[256] = {};
 	GetModuleFileName(NULL, &c_curr_dir[0], 256);
 	curr_dir=regex_replace(c_curr_dir, regex("\\\\[^\\\\]+$"), "");
-	font = TTF_OpenFont((curr_dir + "\\font\\font.ttf").c_str(), 200);
+	font = TTF_OpenFont((curr_dir + "\\font\\font.otf").c_str(), 200);
 	//font
 
 	rect_btn[0].x = scr_w / 2; rect_btn[0].y = int(0.35f*scr_h); rect_btn[0].w = int(0.15f*scr_w); rect_btn[0].h = int(0.1125f*scr_h);
@@ -467,15 +522,61 @@ void Gamemain::init(){
 	rect_btn[5].x = rect_btn[3].x; rect_btn[5].y = rect_btn[0].y; rect_btn[5].w = rect_btn[0].w; rect_btn[5].h = rect_btn[0].h;
 	rect_center = { int(scr_w*0.3f),int(scr_h*0.4f),int(scr_w*0.4f),int(scr_h*0.2f) };
 	rect_bottom= { int(scr_w*0.4f),int(scr_h*0.65f),int(scr_w*0.15f),int(scr_h*0.15f) };
-	rect_stagefile.w = rect_stagefile.h = min(scr_w, scr_h) / 2;
+	rect_stagefile.w = rect_stagefile.h = scr_h*0.3f;
 	rect_stagefile.x = (scr_w - rect_stagefile.w) / 2;
-	rect_stagefile.y = (scr_h - rect_stagefile.h) / 2;
-	rect_r.w = rect_l.w = rect_stagefile.x*0.75f;
+	rect_stagefile.y = scr_h*0.3f;
+	rect_r.w = rect_l.w = scr_w*0.1f;
 	rect_r.x = scr_w - rect_r.w; rect_l.x = 0;
-	rect_r.h = rect_l.h = rect_stagefile.w*0.6f;
-	rect_r.y = rect_l.y = (scr_h - rect_r.h) / 2;
+	rect_r.h = rect_l.h = scr_h*0.2f;
+	rect_r.y = rect_l.y = scr_h*0.35f;
+	rect_arr_r_0.w = rect_arr_l_0.w = scr_w * 0.05f;
+	rect_arr_r_0.h = rect_arr_l_0.h = scr_h * 0.05f;
+	rect_arr_r_0.y = rect_arr_l_0.y = scr_h * 0.45f - rect_arr_r_0.h / 2;
+	rect_arr_l_0.x = scr_w*0.15f; rect_arr_r_0.x = scr_w*0.85f - rect_arr_r_0.w;
+	rect_easy.y = rect_normal.y = rect_hard.y = scr_h * 0.625f;
+	rect_easy.h = rect_normal.h = rect_hard.h = scr_h * 0.05f;
+	rect_easy.w = rect_normal.w = rect_hard.w = scr_h * 0.125f;
+	rect_easy.x = scr_h * 0.075f; rect_normal.x = scr_w * 0.5f - rect_normal.w / 2; rect_hard.x = scr_w-(rect_easy.x+rect_hard.w);
+	rect_notesdesigner.x = scr_w * 0.2f;
+	rect_notesdesigner.y = scr_h * 0.8f;
+	rect_notesdesigner.w = scr_w * 0.6f;
+	rect_notesdesigner.h = scr_h * 0.03f;
+	rect_title = { int(scr_w*0.25f),int(scr_h*0.1f),scr_w/2,int(scr_h*0.1f) };
+	rect_composer = { int(scr_w*0.15f),int(scr_h*0.22f),int(scr_w*0.7f),int(scr_h*0.05f) };
+	rect_arr_l[0].w = rect_arr_l[1].w = rect_arr_l[2].w = rect_arr_l[3].w = rect_arr_r[0].w = rect_arr_r[1].w = rect_arr_r[2].w = rect_arr_r[3].w =scr_w * 0.03f;
+	rect_arr_l[0].h = rect_arr_l[1].h = rect_arr_l[2].h = rect_arr_l[3].h = rect_arr_r[0].h = rect_arr_r[1].h = rect_arr_r[2].h = rect_arr_r[3].h =scr_h * 0.03f;
+	rect_arr_l[0].y = rect_arr_l[1].y = rect_arr_l[2].y = rect_arr_l[3].y = rect_arr_r[0].y = rect_arr_r[1].y = rect_arr_r[2].y = rect_arr_r[3].y= scr_h * 0.635f;
+	rect_arr_l[0].x = rect_easy.x - scr_w * 0.05f;
+	rect_arr_l[1].x = rect_arr_l[0].x+rect_normal.x - rect_easy.x;
+	rect_arr_l[2].x = rect_arr_l[0].x + rect_hard.x-rect_easy.x;
+	rect_arr_r[0].x = rect_easy.x + rect_easy.w + scr_w * 0.01f;
+	rect_arr_r[1].x = rect_arr_r[0].x + rect_normal.x - rect_easy.x;
+	rect_arr_r[2].x = rect_arr_r[0].x + rect_hard.x - rect_easy.x;
+	p_lv_easy = {int(scr_w*0.1425f),int(scr_h*0.725f)};
+	p_lv_normal = { int(scr_w*0.5f),int(scr_h*0.725f) };
+	p_lv_hard = { int(scr_w*0.8375f),int(scr_h*0.725f) };
+	p_speed_conf.x = scr_w/2;
+	p_speed_conf.y = scr_h * 0.82f;
+	speed_conf.init(render, font);
+
+	tmp = IMG_Load((string(curr_dir) + "\\data\\arrow_r.png").c_str());
+	arr = SDL_CreateTextureFromSurface(render, tmp);
+	SDL_FreeSurface(tmp);
+	tmp = IMG_Load((string(curr_dir) + "\\data\\easy.png").c_str());
+	easy = SDL_CreateTextureFromSurface(render, tmp);
+	SDL_FreeSurface(tmp);
+	tmp = IMG_Load((string(curr_dir) + "\\data\\normal.png").c_str());
+	normal = SDL_CreateTextureFromSurface(render, tmp);
+	SDL_FreeSurface(tmp);
+	tmp = IMG_Load((string(curr_dir) + "\\data\\hard.png").c_str());
+	hard = SDL_CreateTextureFromSurface(render, tmp);
+	SDL_FreeSurface(tmp);
+	tmp = IMG_Load((string(curr_dir) + "\\data\\black_back.png").c_str());
+	black_back = SDL_CreateTextureFromSurface(render, tmp);
+	SDL_FreeSurface(tmp);
+	//choose
+
 	rect_col.x = rect_btn[4].x + rect_btn[4].w; rect_col.w = rect_btn[1].x - rect_col.x;
-	SDL_Surface* tmp=NULL;
 	tmp = IMG_Load((string(curr_dir) + "\\data\\border.png").c_str());
 	border = SDL_CreateTextureFromSurface(render, tmp);
 	SDL_FreeSurface(tmp);
@@ -483,10 +584,10 @@ void Gamemain::init(){
 	title_logo = SDL_CreateTextureFromSurface(render, tmp);
 	SDL_FreeSurface(tmp);
 	SDL_QueryTexture(title_logo, NULL,NULL, &tex_w, &tex_h);
-	rect_title.w = scr_w * 0.8f;
-	rect_title.h = rect_title.w*tex_h / tex_w;
-	rect_title.x = (scr_w-rect_title.w)/2;
-	rect_title.y = scr_h * 0.55f - rect_title.h / 2;
+	rect_title_logo.w = scr_w * 0.8f;
+	rect_title_logo.h = rect_title_logo.w*tex_h / tex_w;
+	rect_title_logo.x = (scr_w-rect_title_logo.w)/2;
+	rect_title_logo.y = scr_h * 0.55f - rect_title_logo.h / 2;
 	tmp = IMG_Load((string(curr_dir) + "\\data\\bar_line.png").c_str());
 	bar_line = SDL_CreateTextureFromSurface(render, tmp);
 	SDL_FreeSurface(tmp);
@@ -551,7 +652,7 @@ void Gamemain::init(){
 	SDL_QueryTexture(letter_timing[0], NULL, NULL, &tex_w, &tex_h);
 	rect_timing.h = rect_timing.w*tex_h / tex_w;
 	rect_timing.y = scr_h / 2;
-	for (int i = 0; i < 9; i++) {
+	for (int i = 0; i < 10; i++) {
 		tmp = IMG_Load((curr_dir + "\\data\\rank_" + to_string(i) + ".png").c_str());
 		letter_rank[i] = SDL_CreateTextureFromSurface(render, tmp);
 		SDL_FreeSurface(tmp);
@@ -571,7 +672,37 @@ void Gamemain::init(){
 	Mix_GroupChannels(12, 61, 6);
 	Mix_GroupChannels(62, 71, 7);//for long sound
 	//group for bgm
+	bgm_title = Mix_LoadMUS((curr_dir + "\\data\\bgm_title.wav").c_str());
+	bgm_result = Mix_LoadMUS((curr_dir + "\\data\\bgm_result.wav").c_str());
 	//mixer
+
+	ifstream ifs(curr_dir + "\\data\\config.txt");
+	string line;
+	while (getline(ifs, line)) {
+		if (line.find("latency")!=0)continue;
+		if (line.find("latency1:") == 0)latency1 = stol(line.substr(9));
+		if (line.find("latency2:") == 0)latency2 = stol(line.substr(9));
+	}
+	ifs.close();
+	//config.txt
+
+	letter_title.init(render, font, f_color, &rect_title, bmsm.get_title(), 0.01f);
+	composer.init(render, font, f_color, &rect_composer, bmsm.get_composer(), 0.01f);
+	lv_easy.init(render, font);
+	lv_normal.init(render, font);
+	lv_hard.init(render, font);
+	cap_speed.init(render, font);
+	notesdesigner.init(render, font, f_color, &rect_notesdesigner, bmsm.get_notesdesigner(), 0.01f);
+	letter_title.set_text(bmsm.get_title());
+	composer.set_text(bmsm.get_composer());
+	lv_easy.set_center(to_string(bmsm.get_playlevel(0)), p_lv_easy.x, p_lv_easy.y, scr_h*0.08f, f_color);
+	lv_normal.set_center(to_string(bmsm.get_playlevel(1)), p_lv_normal.x, p_lv_normal.y, scr_h*0.08f, f_color);
+	lv_hard.set_center(to_string(bmsm.get_playlevel(2)), p_lv_hard.x, p_lv_hard.y, scr_h*0.08f, f_color);
+	cap_speed.set_center("Speed", scr_w / 2, int(scr_h*0.2f), int(scr_h*0.1f), f_color);
+	notesdesigner.set_text(bmsm.get_notesdesigner());
+
+	//qr.userid = "16a9";
+	//qr.send(2, 0, 120000);
 
 	timer->start();
 }
