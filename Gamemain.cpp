@@ -438,8 +438,9 @@ int Gamemain::result(){
 		qr.send(bmsm.get_lv(),bmsm.get_sel(),score);
 		qr.reset();
 	}
-	for (rank = 0; rank < 8; rank++) {
+	for (rank = 0; rank < 9;) {
 		if (score >= range_rank[rank])break;
+		else rank++;
 	}
 
 	s_letter = TTF_RenderUTF8_Blended(font, ("Lv."+digit((int)bmsm.get_playlevel(), 2)).c_str(), f_color);
