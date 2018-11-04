@@ -10,6 +10,7 @@ void Gamemain::change_mode() {
 		case M_TITLE:
 			//Mix_HaltMusic();
 			//bmsm.play_bgm();
+			letter_title.set_text(bmsm.get_title(), &f_color);
 			mode = M_CHOOSE;
 			break;
 		case M_CHOOSE:
@@ -28,6 +29,7 @@ void Gamemain::change_mode() {
 		case M_PLAY:
 			Mix_HaltChannel(-1);
 			Mix_PlayMusic(bgm_result, -1);
+			letter_title.set_text(bmsm.get_title(), &f_color_2);
 			mode = M_RESULT;
 			break;
 		case M_RESULT:

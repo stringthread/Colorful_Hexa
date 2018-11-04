@@ -480,9 +480,10 @@ void Letter_Scroll::init(SDL_Renderer *a_render, TTF_Font *a_font, SDL_Color a_c
 	rate_v = f_vel;
 	v = (int)(src.h*f_vel);
 }
-void Letter_Scroll::set_text(string a_str) {
+void Letter_Scroll::set_text(string a_str,SDL_Color *a_color) {
 	SDL_Surface *sur;
 	str = a_str;
+	color = *a_color;
 	sur = TTF_RenderText_Blended(font, str.c_str(), color);
 	tex = SDL_CreateTextureFromSurface(render, sur);
 	SDL_FreeSurface(sur);
