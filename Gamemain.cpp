@@ -34,6 +34,7 @@ void Gamemain::change_mode() {
 			break;
 		case M_RESULT:
 			Mix_HaltChannel(-1);
+			Mix_HaltMusic();
 			bmsm.reset();
 			qr.reset();
 			qr.read_start();
@@ -92,7 +93,7 @@ void Gamemain::draw_note(long count,int lane,int color,long end_count,bool is_ba
 		dis_note_in = (0.3f + 0.7f*max(count - bmsm.time_to_count(play_time), 0) / (bmsm.time_to_count(play_time + bmsm.time_draw_start) - bmsm.time_to_count(play_time)))*scr_h/2;
 		dis_note_out = (min(0.3f + 0.7f*(end_count - bmsm.time_to_count(play_time)) / (bmsm.time_to_count(play_time + bmsm.time_draw_start) - bmsm.time_to_count(play_time)), 1)/2+NOTE_W)*scr_h;
 		rect_note.h = (dis_note_out - dis_note_in)*sin(pi/3)+1;
-		rect_note.w = rect_note.h*size_ln[0];
+		rect_note.w = rect_note.h*size_ln_side;
 		rect_note.x = scr_w / 2 + sin(pi*lane / 3)*dis_note_in-rect_note.w;
 		rect_note.y = scr_h / 2 - cos(pi*lane / 3)*dis_note_in-rect_note.h;
 		center.x = rect_note.w;
@@ -188,7 +189,7 @@ string Gamemain::digit(float data, int n) {
 }
 
 int Gamemain::title(){
-	if (bmsm.header_loaded) {
+	if (bmsm.get_header_loaded()) {
 		if (!qr.inited) {
 			auto th = thread([this]{ qr.init(curr_dir); });
 			th.detach();
@@ -200,11 +201,11 @@ int Gamemain::title(){
 		if(Mix_PlayingMusic()==0)Mix_PlayMusic(bgm_title, -1);
 		SDL_RenderCopyAlpha(render, title_logo, NULL, &rect_title_logo, 180 + 75 * cos(0.001*timer->get_time()));
 		//draw title screen
-	} else {
+	}/* else {
 		SDL_SetRenderDrawColor(render, 0xff, 0xaa, 0xff, SDL_ALPHA_OPAQUE);
 		SDL_RenderClear(render);
 		//draw opening screen
-	}
+	}*/
 	return 0;
 }
 
@@ -271,7 +272,7 @@ int Gamemain::choose(){
 
 		SDL_RenderCopyAlpha(render, black_back, NULL, NULL,16);
 		cap_speed.draw();
-		s_letter = TTF_RenderText_Blended(font, digit(bmsm.get_speed(), 2).c_str(), f_color);
+		s_letter = TTF_RenderUTF8_Blended(font, digit(bmsm.get_speed(), 2).c_str(), f_color);
 		letter = SDL_CreateTextureFromSurface(render, s_letter);
 		SDL_FreeSurface(s_letter);
 		rect_center.w = rect_center.h*1.5f;
@@ -313,9 +314,9 @@ int Gamemain::choose(){
 }
 
 int Gamemain::loading() {
-	if (bmsm.music_loaded) {
+	if (bmsm.get_music_loaded()) {
 		unit_col_gauge = 12.0f/bmsm.get_num_note();
-		bmsm.music_loaded = false;
+		bmsm.set_music_loaded(false);
 		change_mode();
 		//draw play start screen
 	}
@@ -341,7 +342,9 @@ int Gamemain::play(){
 						if (Mix_Playing(ch) == 1)Mix_HaltChannel(ch);
 					}
 				play:
-					Mix_PlayChannel(ch, bmsm.get_wav(notes[i][j].get_data()), 0);
+					if (Mix_PlayMusic(bmsm.get_wav(notes[i][j].get_data()), 0) == -1) {
+						SDL_Log(Mix_GetError());
+					}
 					bmsm.set_pushed(0, notes[i][j].get_index());
 				}
 			}
@@ -455,6 +458,7 @@ int Gamemain::result(){
 	SDL_FreeSurface(s_letter);
 	SDL_RenderCopy(render, letter, NULL, &rect_lv_res);
 	SDL_DestroyTexture(letter);
+	letter_title.draw();
 	s_letter = TTF_RenderUTF8_Blended(font, ("Score: "+digit((int)score,6)).c_str(), f_color);
 	letter = SDL_CreateTextureFromSurface(render, s_letter);
 	SDL_FreeSurface(s_letter);
@@ -508,12 +512,20 @@ int Gamemain::result(){
 	return 0;
 }
 
+void Gamemain::init_sync(){
+	char c_curr_dir[256] = {};
+	GetModuleFileName(NULL, &c_curr_dir[0], 256);
+	curr_dir = regex_replace(c_curr_dir, regex("\\\\[^\\\\]+$"), "");
+	//directory
+
+	bg_1.init(render, (string(curr_dir) + "\\data\\bg_1.png").c_str());
+	bg_2.init(render, (string(curr_dir) + "\\data\\bg_2.png").c_str());
+	//loading
+}
+
 void Gamemain::init(){
 	SDL_Surface* tmp = NULL;
 	TTF_Init();
-	char c_curr_dir[256] = {};
-	GetModuleFileName(NULL, &c_curr_dir[0], 256);
-	curr_dir=regex_replace(c_curr_dir, regex("\\\\[^\\\\]+$"), "");
 	font = TTF_OpenFont((curr_dir + "\\font\\font.otf").c_str(), 200);
 	//font
 
@@ -546,9 +558,9 @@ void Gamemain::init(){
 	rect_notesdesigner.h = scr_h * 0.03f;
 	rect_title = { int(scr_w*0.25f),int(scr_h*0.1f),scr_w/2,int(scr_h*0.1f) };
 	rect_composer = { int(scr_w*0.15f),int(scr_h*0.22f),int(scr_w*0.7f),int(scr_h*0.05f) };
-	rect_arr_l[0].w = rect_arr_l[1].w = rect_arr_l[2].w = rect_arr_l[3].w = rect_arr_r[0].w = rect_arr_r[1].w = rect_arr_r[2].w = rect_arr_r[3].w =scr_w * 0.03f;
-	rect_arr_l[0].h = rect_arr_l[1].h = rect_arr_l[2].h = rect_arr_l[3].h = rect_arr_r[0].h = rect_arr_r[1].h = rect_arr_r[2].h = rect_arr_r[3].h =scr_h * 0.03f;
-	rect_arr_l[0].y = rect_arr_l[1].y = rect_arr_l[2].y = rect_arr_l[3].y = rect_arr_r[0].y = rect_arr_r[1].y = rect_arr_r[2].y = rect_arr_r[3].y= scr_h * 0.635f;
+	rect_arr_l[0].w = rect_arr_l[1].w = rect_arr_l[2].w = rect_arr_r[0].w = rect_arr_r[1].w = rect_arr_r[2].w =scr_w * 0.03f;
+	rect_arr_l[0].h = rect_arr_l[1].h = rect_arr_l[2].h = rect_arr_r[0].h = rect_arr_r[1].h = rect_arr_r[2].h =scr_h * 0.03f;
+	rect_arr_l[0].y = rect_arr_l[1].y = rect_arr_l[2].y = rect_arr_r[0].y = rect_arr_r[1].y = rect_arr_r[2].y = scr_h * 0.635f;
 	rect_arr_l[0].x = rect_easy.x - scr_w * 0.05f;
 	rect_arr_l[1].x = rect_arr_l[0].x+rect_normal.x - rect_easy.x;
 	rect_arr_l[2].x = rect_arr_l[0].x + rect_hard.x-rect_easy.x;
@@ -562,105 +574,65 @@ void Gamemain::init(){
 	p_speed_conf.y = scr_h * 0.82f;
 	speed_conf.init(render, font);
 
-	tmp = IMG_Load((string(curr_dir) + "\\data\\arrow_r.png").c_str());
-	arr = SDL_CreateTextureFromSurface(render, tmp);
-	SDL_FreeSurface(tmp);
-	tmp = IMG_Load((string(curr_dir) + "\\data\\easy.png").c_str());
-	easy = SDL_CreateTextureFromSurface(render, tmp);
-	SDL_FreeSurface(tmp);
-	tmp = IMG_Load((string(curr_dir) + "\\data\\normal.png").c_str());
-	normal = SDL_CreateTextureFromSurface(render, tmp);
-	SDL_FreeSurface(tmp);
-	tmp = IMG_Load((string(curr_dir) + "\\data\\hard.png").c_str());
-	hard = SDL_CreateTextureFromSurface(render, tmp);
-	SDL_FreeSurface(tmp);
-	tmp = IMG_Load((string(curr_dir) + "\\data\\black_back.png").c_str());
-	black_back = SDL_CreateTextureFromSurface(render, tmp);
-	SDL_FreeSurface(tmp);
+	arr.init((string(curr_dir) + "\\data\\arrow_r.png"));
+	easy.init((string(curr_dir) + "\\data\\easy.png"));
+	normal.init((string(curr_dir) + "\\data\\normal.png"));
+	hard.init((string(curr_dir) + "\\data\\hard.png"));
+	black_back.init((string(curr_dir) + "\\data\\black_back.png"));
 	//choose
 
 	rect_col.x = rect_btn[4].x + rect_btn[4].w; rect_col.w = rect_btn[1].x - rect_col.x;
-	tmp = IMG_Load((string(curr_dir) + "\\data\\border.png").c_str());
-	border = SDL_CreateTextureFromSurface(render, tmp);
-	SDL_FreeSurface(tmp);
-	tmp = IMG_Load((string(curr_dir) + "\\data\\title_logo.png").c_str());
-	title_logo = SDL_CreateTextureFromSurface(render, tmp);
-	SDL_FreeSurface(tmp);
-	SDL_QueryTexture(title_logo, NULL,NULL, &tex_w, &tex_h);
-	rect_title_logo.w = scr_w * 0.8f;
-	rect_title_logo.h = rect_title_logo.w*tex_h / tex_w;
-	rect_title_logo.x = (scr_w-rect_title_logo.w)/2;
-	rect_title_logo.y = scr_h * 0.55f - rect_title_logo.h / 2;
-	tmp = IMG_Load((string(curr_dir) + "\\data\\bar_line.png").c_str());
-	bar_line = SDL_CreateTextureFromSurface(render, tmp);
-	SDL_FreeSurface(tmp);
+	border.init((string(curr_dir) + "\\data\\border.png"));
+	title_logo.init((string(curr_dir) + "\\data\\title_logo.png"), [this]()->void{
+		SDL_QueryTexture(title_logo, NULL, NULL, &tex_w, &tex_h);
+		rect_title_logo.w = scr_w * 0.8f;
+		rect_title_logo.h = rect_title_logo.w*tex_h / tex_w;
+		rect_title_logo.x = (scr_w - rect_title_logo.w) / 2;
+		rect_title_logo.y = scr_h * 0.55f - rect_title_logo.h / 2;
+	});
+	bar_line.init((string(curr_dir) + "\\data\\bar_line.png"));
 	for (int i= 0; i < 6; i++) {
-		tmp = IMG_Load((string(curr_dir) + "\\data\\btn_" + to_string(i)+".png").c_str());
-		btn[i] = SDL_CreateTextureFromSurface(render,tmp);
-		SDL_FreeSurface(tmp);
-		tmp = IMG_Load((string(curr_dir) + "\\data\\btn_p_" + to_string(i)+".png").c_str());
-		btn_p[i] = SDL_CreateTextureFromSurface(render, tmp);
-		SDL_FreeSurface(tmp);
-		tmp = IMG_Load((string(curr_dir) + "\\data\\btn_col_" + to_string(i) + ".png").c_str());
-		btn_col[i] = SDL_CreateTextureFromSurface(render, tmp);
-		SDL_FreeSurface(tmp);
-		tmp = IMG_Load((string(curr_dir) + "\\data\\n_" + to_string(i) + ".png").c_str());
-		note[i] = SDL_CreateTextureFromSurface(render, tmp);
-		SDL_FreeSurface(tmp);
+		btn[i].init((string(curr_dir) + "\\data\\btn_" + to_string(i)+".png"));
+		btn_p[i].init((string(curr_dir) + "\\data\\btn_p_" + to_string(i)+".png"));
+		btn_col[i].init((string(curr_dir) + "\\data\\btn_col_" + to_string(i) + ".png"));
+		note[i].init((string(curr_dir) + "\\data\\n_" + to_string(i) + ".png"));
 		for (int j = 0; j < 2; j++) {
-			tmp = IMG_Load((string(curr_dir) + "\\data\\ln_" + to_string(i) + "_" + to_string(j) + ".png").c_str());
-			ln[i][j] = SDL_CreateTextureFromSurface(render, tmp);
-			SDL_FreeSurface(tmp);
+			if (i == 0 && j == 0) ln[i][j].init((string(curr_dir) + "\\data\\ln_" + to_string(i) + "_" + to_string(j) + ".png"), [this]()->void{
+				SDL_QueryTexture(ln[0][0], NULL, NULL, &tex_w, &tex_h);
+				size_ln_side = float(tex_w) / float(tex_h);
+			});
+			else ln[i][j].init((string(curr_dir) + "\\data\\ln_" + to_string(i) + "_" + to_string(j) + ".png"));
 		}
 	}
-	for (int i = 0; i < 3; i++) {
-		SDL_QueryTexture(ln[0][i], NULL, NULL, &tex_w, &tex_h);
-		size_ln[i] = float(tex_w) / float(tex_h);
-	}
-	tmp = IMG_Load((string(curr_dir) + "\\data\\ln_end.png").c_str());
-	note[6] = SDL_CreateTextureFromSurface(render, tmp);
-	SDL_FreeSurface(tmp);
+	note[6].init((string(curr_dir) + "\\data\\ln_end.png"));
 
-	tmp = IMG_Load((string(curr_dir) + "\\data\\Perfect.png").c_str());
-	letter_judge[0] = SDL_CreateTextureFromSurface(render, tmp);
-	SDL_FreeSurface(tmp);
-	tmp = IMG_Load((string(curr_dir) + "\\data\\Great.png").c_str());
-	letter_judge[1] = SDL_CreateTextureFromSurface(render, tmp);
-	SDL_FreeSurface(tmp);
-	tmp = IMG_Load((string(curr_dir) + "\\data\\Good.png").c_str());
-	letter_judge[2] = SDL_CreateTextureFromSurface(render, tmp);
-	SDL_FreeSurface(tmp);
-	tmp = IMG_Load((string(curr_dir) + "\\data\\Miss.png").c_str());
-	letter_judge[3] = SDL_CreateTextureFromSurface(render, tmp);
-	SDL_FreeSurface(tmp);
-	rect_judge.x = int(scr_w*0.4f);
-	rect_judge.w = int(scr_w*0.2f);
-	SDL_QueryTexture(letter_judge[0], NULL, NULL, &tex_w, &tex_h);
-	rect_judge.h = rect_judge.w*tex_h / tex_w;
-	rect_judge.y = scr_h / 2 - rect_judge.h;
-	bg_1.init(render, (string(curr_dir) + "\\data\\bg_1.png").c_str());
-	bg_2.init(render, (string(curr_dir) + "\\data\\bg_2.png").c_str());
+	letter_judge[0].init((string(curr_dir) + "\\data\\Perfect.png"), [this]()->void {
+		rect_judge.x = int(scr_w*0.4f);
+		rect_judge.w = int(scr_w*0.2f);
+		SDL_QueryTexture(letter_judge[0], NULL, NULL, &tex_w, &tex_h);
+		rect_judge.h = rect_judge.w*tex_h / tex_w;
+		rect_judge.y = scr_h / 2 - rect_judge.h;
+	});
+	letter_judge[1].init((string(curr_dir) + "\\data\\Great.png"));
+	letter_judge[2].init((string(curr_dir) + "\\data\\Good.png"));
+	letter_judge[3].init((string(curr_dir) + "\\data\\Miss.png"));
 
-	tmp = IMG_Load((string(curr_dir) + "\\data\\Just.png").c_str());
-	letter_timing[0] = SDL_CreateTextureFromSurface(render, tmp);
-	SDL_FreeSurface(tmp);
-	tmp = IMG_Load((string(curr_dir) + "\\data\\Fast.png").c_str());
-	letter_timing[1] = SDL_CreateTextureFromSurface(render, tmp);
-	SDL_FreeSurface(tmp);
-	tmp = IMG_Load((string(curr_dir) + "\\data\\Late.png").c_str());
-	letter_timing[2] = SDL_CreateTextureFromSurface(render, tmp);
-	SDL_FreeSurface(tmp);
-	rect_timing.x = int(scr_w*0.4f);
-	rect_timing.w = int(scr_w*0.2f);
-	SDL_QueryTexture(letter_timing[0], NULL, NULL, &tex_w, &tex_h);
-	rect_timing.h = rect_timing.w*tex_h / tex_w;
-	rect_timing.y = scr_h / 2;
+	letter_timing[0].init((string(curr_dir) + "\\data\\Just.png"), [this]()->void{
+		rect_timing.x = int(scr_w*0.4f);
+		rect_timing.w = int(scr_w*0.2f);
+		SDL_QueryTexture(letter_timing[0], NULL, NULL, &tex_w, &tex_h);
+		rect_timing.h = rect_timing.w*tex_h / tex_w;
+		rect_timing.y = scr_h / 2;
+	});
+	letter_timing[1].init((string(curr_dir) + "\\data\\Fast.png"));
+	letter_timing[2].init((string(curr_dir) + "\\data\\Late.png"));
+	
 	for (int i = 0; i < 10; i++) {
-		tmp = IMG_Load((curr_dir + "\\data\\rank_" + to_string(i) + ".png").c_str());
-		letter_rank[i] = SDL_CreateTextureFromSurface(render, tmp);
-		SDL_FreeSurface(tmp);
+		letter_rank[i].init(curr_dir + "\\data\\rank_" + to_string(i) + ".png");
 	}
 	//image
+
+	bmsm.init(render);
 
 	bgm_ready = Mix_LoadWAV((curr_dir + "\\data\\bgm_ready.wav").c_str());
 
@@ -707,7 +679,8 @@ void Gamemain::init(){
 	//qr.userid = "16a9";
 	//qr.send(2, 0, 120000);
 
-	timer->start();
+	set_is_init_comp();
+	//timer->start();
 }
 
 int Gamemain::loop() {//quit when you don't return 0
@@ -752,12 +725,14 @@ int Gamemain::loop() {//quit when you don't return 0
 	bg_2.draw();
 	SDL_RenderCopy(render, border, NULL, NULL);
 
-	switch (mode) {
-	case M_TITLE:title(); break;
-	case M_CHOOSE:choose(); break;
-	case M_LOADING:loading(); break;
-	case M_PLAY:play(); break;
-	case M_RESULT:result(); break;
+	if (is_init_comp()) {
+		switch (mode) {
+			case M_TITLE:title(); break;
+			case M_CHOOSE:choose(); break;
+			case M_LOADING:loading(); break;
+			case M_PLAY:play(); break;
+			case M_RESULT:result(); break;
+		}
 	}
 	SDL_RenderPresent(render);
 

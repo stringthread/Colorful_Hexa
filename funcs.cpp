@@ -3,6 +3,9 @@
 #include <mmsystem.h>
 
 //Timer
+Timer::Timer() {
+	start();
+}
 void Timer::start(){
 	high = QueryPerformanceFrequency(&freq);
 	if (high) {
@@ -70,7 +73,7 @@ int QR_Reader::send(int rank,int song,int score){
 	curl = curl_easy_init();
 	string chunk,url,post_data;
 	url = "http://tk67ennichi.official.jp/enpass/database.php";
-	post_data = "mode=set&id="+userid+"&password=torisasamiyukke&attrac=colorfulhexa&score_mode="+to_string(rank)+"&song="+to_string(song)+"&score="+to_string(score);
+	post_data = "mode='set'&id='"+userid+"'&password='torisasamiyukke'&attrac='colorfulhexa'&score_mode="+to_string(rank)+"&song="+to_string(song)+"&score="+to_string(score);
 	//url = "http://localhost/test/test.php";
 	//post_data = "test=qwerty";
 	if (curl){
@@ -131,8 +134,9 @@ void QR_Reader::close(){
 }
 
 //BMS_Manager
-BMS_Manager::BMS_Manager(SDL_Renderer* render) {
-	auto th = thread([this,render] {
+//BMS_Manager::BMS_Manager(SDL_Renderer* render) {
+void BMS_Manager::init(SDL_Renderer* render){
+	//auto th = thread([this,render] {
 		HANDLE h_dir, h_file;
 		WIN32_FIND_DATA dir_data, file_data;
 		char curr_dir[256] = {};
@@ -153,6 +157,7 @@ BMS_Manager::BMS_Manager(SDL_Renderer* render) {
 				for (int i = 0; i < 3; i++) {
 					error = 0;
 					h_file = FindFirstFile((dir_path + wildcards[i]).c_str(), &file_data);
+					Sleep(0);
 					if (h_file == INVALID_HANDLE_VALUE) {
 						continue;
 					}
@@ -168,21 +173,23 @@ BMS_Manager::BMS_Manager(SDL_Renderer* render) {
 								break;
 							}
 						}
+						Sleep(0);
 					}
 				}
 			}
 			if (!FindNextFile(h_dir, &dir_data)) {
 				if (GetLastError() != ERROR_NO_MORE_FILES)error = -1;
 				FindClose(h_dir);
-				header_loaded = true;
 				break;
 			}
+			Sleep(0);
 		}
 		if (header.size() == 0) {
 			error = -1;
 		}
-	});
-	th.detach();
+		set_header_loaded(true);
+	/*});
+	th.detach();*/
 	//load header
 }
 int BMS_Manager::Header::load(string dir,string file,bool is_first,SDL_Renderer* render) {
@@ -239,22 +246,23 @@ int BMS_Manager::Header::load(string dir,string file,bool is_first,SDL_Renderer*
 				has_total = true;
 				break;
 			case 9:
-				tmp = IMG_Load((dir + data).c_str());
-				stagefile = SDL_CreateTextureFromSurface(render,tmp);
-				SDL_FreeSurface(tmp);
+				if (stagefile) break;
+				stagefile.init(dir + data);
 				break;
 			case 10:
 				notesdesigner = data;
 				break;
 			case 11:
-				bgm = Mix_LoadWAV((dir + data).c_str());
+				//bgm = Mix_LoadMUS((dir + data).c_str());
 				break;
 			}
 		}
+		Sleep(0);
 	}
 	ifs.close();
 	if (bpm.size() < num)bpm.push_back("130");
 	if (!has_total)total.push_back(300l);
+	Sleep(0);
 	return 0;
 }
 void BMS_Manager::Header::sort() {
@@ -332,10 +340,13 @@ int BMS_Manager::load_music(SDL_Renderer *render){
 	while(getline(ifs,line)){
 		line = regex_replace(line,regex("[ \t]+$"),"");
 		if (regex_search(line, regex("^#BMP[0-9]{2}"))) {
-			bmp[line.substr(4,2)]=SDL_CreateTextureFromSurface(render,IMG_Load(regex_replace(line, regex("#BMP[0-9]{2}[ \t]+"), "").c_str()));
+			bmp[line.substr(4,2)].init(regex_replace(line, regex("#BMP[0-9]{2}[ \t]+"), ""));
 		}
 		if (regex_search(line, regex("^#WAV[0-9]{2}"))) {
-			wav[line.substr(4, 2)] = Mix_LoadWAV((header[sel].dir+regex_replace(line, regex("#WAV[0-9]{2}[ \t]+"), "")).c_str());
+			wav[line.substr(4, 2)] = Mix_LoadMUS((header[sel].dir+regex_replace(line, regex("#WAV[0-9]{2}[ \t]+"), "")).c_str());
+			if (wav[line.substr(4, 2)] == nullptr) {
+				SDL_Log(Mix_GetError());
+			}
 		}
 		if (regex_search(line, regex("^#BPM[0-9]{2}"))) {
 			bpm[line.substr(4, 2)] = stoi(regex_replace(line, regex("#BPM[0-9]{2}[ \t]+"), ""));
@@ -399,7 +410,7 @@ int BMS_Manager::load_music(SDL_Renderer *render){
 	set_time_bpm_change();
 
 	ending:
-	music_loaded = true;//tell thread ending
+	set_music_loaded(true);//tell thread ending
 	return 0;
 }
 void BMS_Manager::reset() {
@@ -407,7 +418,8 @@ void BMS_Manager::reset() {
 		music[i].clear();
 	}
 	for (auto itr = wav.begin(), end = wav.end(); itr != end; ++itr) {
-		Mix_FreeChunk(itr->second);
+		Mix_FreeMusic(itr->second);
+		itr->second = NULL;
 	}
 	wav.clear();
 	for (auto itr = bmp.begin(), end = bmp.end(); itr != end; ++itr) {
@@ -466,7 +478,7 @@ void Letter_Scroll::init(SDL_Renderer *a_render, TTF_Font *a_font, SDL_Color a_c
 	org_dst=dst = *a_dst;
 	str = a_str;
 	SDL_Surface *sur;
-	sur = TTF_RenderText_Blended(font, str.c_str(), color);
+	sur = TTF_RenderUTF8_Blended(font, str.c_str(), color);
 	tex = SDL_CreateTextureFromSurface(render, sur);
 	SDL_FreeSurface(sur);
 	SDL_QueryTexture(tex, NULL, NULL, &tex_w, &tex_h);
@@ -483,8 +495,8 @@ void Letter_Scroll::init(SDL_Renderer *a_render, TTF_Font *a_font, SDL_Color a_c
 void Letter_Scroll::set_text(string a_str,SDL_Color *a_color) {
 	SDL_Surface *sur;
 	str = a_str;
-	color = *a_color;
-	sur = TTF_RenderText_Blended(font, str.c_str(), color);
+	if(a_color!=NULL)color = *a_color;
+	sur = TTF_RenderUTF8_Blended(font, str.c_str(), color);
 	tex = SDL_CreateTextureFromSurface(render, sur);
 	SDL_FreeSurface(sur);
 	SDL_QueryTexture(tex, NULL, NULL, &tex_w, &tex_h);
@@ -523,7 +535,7 @@ void Letter_Scroll::close(){
 void Text_Draw::set_left(string a_text, int x, int y, unsigned int h,const SDL_Color col) {
 	SDL_Surface *sur;
 	text = a_text;
-	sur = TTF_RenderText_Blended(font, text.c_str(), col);
+	sur = TTF_RenderUTF8_Blended(font, text.c_str(), col);
 	tex = SDL_CreateTextureFromSurface(render,sur);
 	SDL_FreeSurface(sur);
 	int tex_w, tex_h;
@@ -536,7 +548,7 @@ void Text_Draw::set_left(string a_text, int x, int y, unsigned int h,const SDL_C
 void Text_Draw::set_center(string a_text, int x_cen, int y_cen, unsigned int h, const SDL_Color col) {
 	SDL_Surface *sur;
 	text = a_text;
-	sur = TTF_RenderText_Blended(font, text.c_str(), col);
+	sur = TTF_RenderUTF8_Blended(font, text.c_str(), col);
 	tex = SDL_CreateTextureFromSurface(render, sur);
 	SDL_FreeSurface(sur);
 	int tex_w, tex_h;
@@ -551,6 +563,63 @@ void Text_Draw::draw() {
 }
 void Text_Draw::close() {
 	SDL_DestroyTexture(tex);
+}
+
+void Lazy_Texture::init(string path, function<void()> callback) {
+	free();
+	surface = IMG_Load(path.c_str());
+	push_queue(this, callback);
+	return;
+}
+void Lazy_Texture::init(string path, bool flg_queue) {
+	free();
+	surface = IMG_Load(path.c_str());
+	if(flg_queue) push_queue(this);
+	return;
+}
+void Lazy_Texture::init(const string path, SDL_Renderer *render) {
+	free();
+	surface = IMG_Load(path.c_str());
+	texturelize(render);
+	return;
+}
+void Lazy_Texture::texturelize(SDL_Renderer *render) {
+	if (tex != NULL) SDL_DestroyTexture(tex);
+	tex = SDL_CreateTextureFromSurface(render, surface);
+	if (tex != NULL) SDL_FreeSurface(surface);
+	return;
+}
+void Lazy_Texture::set_surface(SDL_Surface *arg_surface) {
+	if (surface != NULL) SDL_FreeSurface(surface);
+	surface = arg_surface;
+	return;
+}
+void Lazy_Texture::set_texture(SDL_Texture *arg_tex) {
+	if (tex != NULL) SDL_DestroyTexture(tex);
+	tex = arg_tex;
+	return;
+}
+void Lazy_Texture::free() {
+	SDL_FreeSurface(surface);
+	surface = nullptr;
+	SDL_DestroyTexture(tex);
+	tex = nullptr;
+}
+Safe_Queue<pair<Lazy_Texture*,function<void()>>> Lazy_Texture::que(make_pair(nullptr, nullptr));
+pair<Lazy_Texture*, function<void()>> Lazy_Texture::tmp;
+void Lazy_Texture::texturelize_queue(SDL_Renderer *render) {
+	while (!que.empty()) {
+		tmp=que.pop();
+		if (!tmp.first) continue;
+		tmp.first->texturelize(render);
+		if (tmp.second) {
+			tmp.second();
+		}
+	}
+}
+template <class... Args>
+void Lazy_Texture::push_queue(Lazy_Texture* lt, function<void()> callback) {
+	que.push(make_pair(lt,callback));
 }
 
 //algorithms
