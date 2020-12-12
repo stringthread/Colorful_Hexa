@@ -270,7 +270,7 @@ int Gamemain::choose(){
 		if (input[1] == 1 || (input[1] >= 60 && (input[1] - 60) % 20 == 0)) bmsm.change_speed(0.25f);
 		if (input[4] == 1 || (input[4] >= 60 && (input[4] - 60) % 20 == 0)) bmsm.change_speed(-0.25f);
 
-		SDL_RenderCopyAlpha(render, black_back, NULL, NULL,16);
+		//SDL_RenderCopyAlpha(render, black_back, NULL, NULL,16);
 		cap_speed.draw();
 		s_letter = TTF_RenderUTF8_Blended(font, digit(bmsm.get_speed(), 2).c_str(), f_color);
 		letter = SDL_CreateTextureFromSurface(render, s_letter);
@@ -632,7 +632,7 @@ void Gamemain::init(){
 	}
 	//image
 
-	bmsm.init(render);
+	bmsm.init(render, curr_dir);
 
 	bgm_ready = Mix_LoadWAV((curr_dir + "\\data\\bgm_ready.wav").c_str());
 
@@ -654,9 +654,13 @@ void Gamemain::init(){
 	ifstream ifs(curr_dir + "\\data\\config.txt");
 	string line;
 	while (getline(ifs, line)) {
-		if (line.find("latency")!=0)continue;
+		if (line.find("latency")!=0&& line.find("vol") != 0)continue;
 		if (line.find("latency1:") == 0)latency1 = stol(line.substr(9));
 		if (line.find("latency2:") == 0)latency2 = stol(line.substr(9));
+		/*if (line.find("vol:") == 0) {
+			vol = stoi(line.substr(4));
+			Mix_Volume(-1, vol);
+		}*/
 	}
 	ifs.close();
 	//config.txt
@@ -680,6 +684,7 @@ void Gamemain::init(){
 	//qr.send(2, 0, 120000);
 
 	set_is_init_comp();
+	SDL_Log("gamemain.init() end.");
 	//timer->start();
 }
 

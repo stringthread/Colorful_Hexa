@@ -135,29 +135,41 @@ void QR_Reader::close(){
 
 //BMS_Manager
 //BMS_Manager::BMS_Manager(SDL_Renderer* render) {
-void BMS_Manager::init(SDL_Renderer* render){
+void BMS_Manager::init(SDL_Renderer* render, string curr_dir){
 	//auto th = thread([this,render] {
 		HANDLE h_dir, h_file;
 		WIN32_FIND_DATA dir_data, file_data;
-		char curr_dir[256] = {};
 		string dir_path,root_dir;
 		string wildcards[] = { "*.bms","*.bme","*.bml" };
+		ifstream ifs_info(curr_dir+ "\\song\\info.txt");
+		string line;
+		if (!ifs_info.fail()) {
+			while (getline(ifs_info, line)) {
+				if (line.find("num:") == 0) {
+					try {
+						header.reserve(stoi(line.substr(4)));
+					}
+					catch(const invalid_argument& e){}
+					catch (const out_of_range& e) {}
+				}
+			}
+		}
+		ifs_info.close();
+		if (header.capacity() == 0) header.reserve(10);
 		bool is_first;
-		GetModuleFileName(NULL, &curr_dir[0], 256);
-		root_dir = regex_replace(curr_dir, regex("\\\\[^\\\\]+$"), "");
 		//char_traits<char>::copy(curr_dir, regex_replace(curr_dir, regex("\\\\[^\\\\]+$"), "").c_str(), 256);
-		h_dir = FindFirstFile((root_dir + "\\song\\*").c_str(), &dir_data);
+		h_dir = FindFirstFile((curr_dir + "\\song\\*").c_str(), &dir_data);
 		if (h_dir == INVALID_HANDLE_VALUE) {
 			if (GetLastError() != ERROR_NO_MORE_FILES)error = -1;
 		}
 		while (error == 0) {
-			if (string(dir_data.cFileName).compare(".") != 0 && string(dir_data.cFileName).compare("..") != 0) {
+			if ((dir_data.dwFileAttributes&FILE_ATTRIBUTE_DIRECTORY) && string(dir_data.cFileName).compare(".") != 0 && string(dir_data.cFileName).compare("..") != 0) {
 				is_first = true;
-				dir_path = root_dir + "\\song\\" + dir_data.cFileName + "\\";
+				dir_path = curr_dir + "\\song\\" + dir_data.cFileName + "\\";
 				for (int i = 0; i < 3; i++) {
 					error = 0;
 					h_file = FindFirstFile((dir_path + wildcards[i]).c_str(), &file_data);
-					Sleep(0);
+					//Sleep(0);
 					if (h_file == INVALID_HANDLE_VALUE) {
 						continue;
 					}
@@ -173,7 +185,7 @@ void BMS_Manager::init(SDL_Renderer* render){
 								break;
 							}
 						}
-						Sleep(0);
+						//Sleep(0);
 					}
 				}
 			}
@@ -182,7 +194,7 @@ void BMS_Manager::init(SDL_Renderer* render){
 				FindClose(h_dir);
 				break;
 			}
-			Sleep(0);
+			//Sleep(0);
 		}
 		if (header.size() == 0) {
 			error = -1;
@@ -246,7 +258,7 @@ int BMS_Manager::Header::load(string dir,string file,bool is_first,SDL_Renderer*
 				has_total = true;
 				break;
 			case 9:
-				if (stagefile) break;
+				if (!stagefile.is_free()) break;
 				stagefile.init(dir + data);
 				break;
 			case 10:
@@ -262,7 +274,7 @@ int BMS_Manager::Header::load(string dir,string file,bool is_first,SDL_Renderer*
 	ifs.close();
 	if (bpm.size() < num)bpm.push_back("130");
 	if (!has_total)total.push_back(300l);
-	Sleep(0);
+	//Sleep(0);
 	return 0;
 }
 void BMS_Manager::Header::sort() {
@@ -303,6 +315,8 @@ void BMS_Manager::Header::sort() {
 		rank[i] = tmp[i].rank;
 		total[i] = tmp[i].total;
 	}
+	tmp.clear();
+	tmp.shrink_to_fit();
 }
 int BMS_Manager::load_music(SDL_Renderer *render){
 	string file = header[sel].bmsfile[lv];
@@ -574,7 +588,7 @@ void Lazy_Texture::init(string path, function<void()> callback) {
 void Lazy_Texture::init(string path, bool flg_queue) {
 	free();
 	surface = IMG_Load(path.c_str());
-	if(flg_queue) push_queue(this);
+	if (flg_queue) push_queue(this);
 	return;
 }
 void Lazy_Texture::init(const string path, SDL_Renderer *render) {
@@ -610,14 +624,13 @@ pair<Lazy_Texture*, function<void()>> Lazy_Texture::tmp;
 void Lazy_Texture::texturelize_queue(SDL_Renderer *render) {
 	while (!que.empty()) {
 		tmp=que.pop();
-		if (!tmp.first) continue;
+		if (tmp.first->is_free()) continue;
 		tmp.first->texturelize(render);
 		if (tmp.second) {
 			tmp.second();
 		}
 	}
 }
-template <class... Args>
 void Lazy_Texture::push_queue(Lazy_Texture* lt, function<void()> callback) {
 	que.push(make_pair(lt,callback));
 }
