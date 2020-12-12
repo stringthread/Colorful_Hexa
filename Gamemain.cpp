@@ -198,7 +198,10 @@ int Gamemain::title(){
 			if (qr.read)qr.check_hidden(&bmsm.hidden[0]);
 			change_mode();
 		}
-		if(Mix_PlayingMusic()==0)Mix_PlayMusic(bgm_title, -1);
+		if (Mix_PlayingMusic() == 0) {
+			Mix_HaltMusic();
+			Mix_PlayMusic(bgm_title, -1);
+		}
 		SDL_RenderCopyAlpha(render, title_logo, NULL, &rect_title_logo, 180 + 75 * cos(0.001*timer->get_time()));
 		//draw title screen
 	}/* else {
