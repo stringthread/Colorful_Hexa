@@ -7,6 +7,11 @@
 
 void Gamemain::change_mode() {
 	switch (mode) {
+		case M_STANDBY:
+			//Mix_HaltMusic();
+			Mix_PlayMusic(bgm_title, -1);
+			mode = M_TITLE;
+			break;
 		case M_TITLE:
 			//Mix_HaltMusic();
 			//bmsm.play_bgm();
@@ -36,8 +41,8 @@ void Gamemain::change_mode() {
 			Mix_HaltChannel(-1);
 			Mix_HaltMusic();
 			bmsm.reset();
-			qr.reset();
-			qr.read_start();
+			/*qr.reset();
+			qr.read_start();*/
 			pushing_long.fill(0);
 			judge.fill(0);
 			score = 0;
@@ -190,17 +195,13 @@ string Gamemain::digit(float data, int n) {
 
 int Gamemain::title(){
 	if (bmsm.get_header_loaded()) {
-		if (!qr.inited) {
+		/*if (!qr.inited()) {
 			auto th = thread([this]{ qr.init(curr_dir); });
 			th.detach();
-		} else if (!qr.reading && !qr.read)qr.read_start();
-		if (any_pressed() || qr.read) {
-			if (qr.read)qr.check_hidden(&bmsm.hidden[0]);
+		} else if (!qr.reading() && !qr.read())qr.read_start();*/
+		if (any_pressed()/* || qr.read()*/) {
+			/*if (qr.read())qr.check_hidden(&bmsm.hidden[0]);*/
 			change_mode();
-		}
-		if (Mix_PlayingMusic() == 0) {
-			Mix_HaltMusic();
-			Mix_PlayMusic(bgm_title, -1);
 		}
 		SDL_RenderCopyAlpha(render, title_logo, NULL, &rect_title_logo, 180 + 75 * cos(0.001*timer->get_time()));
 		//draw title screen
@@ -442,10 +443,10 @@ int Gamemain::play(){
 
 int Gamemain::result(){
 	if (any_pressed())change_mode();
-	if (qr.read) {
+	/*if (qr.read()) {
 		qr.send(bmsm.get_lv(),bmsm.get_sel(),score);
 		qr.reset();
-	}
+	}*/
 	for (rank = 0; rank < 9;) {
 		if (score >= range_rank[rank])break;
 		else rank++;
@@ -735,6 +736,7 @@ int Gamemain::loop() {//quit when you don't return 0
 
 	if (is_init_comp()) {
 		switch (mode) {
+			case M_STANDBY:change_mode(); break;
 			case M_TITLE:title(); break;
 			case M_CHOOSE:choose(); break;
 			case M_LOADING:loading(); break;
@@ -755,7 +757,7 @@ void Gamemain::close(){
 	for (int i = 0; i < 4; i++)SDL_DestroyTexture(letter_judge[i]);
 	for (int i = 0; i < 3; i++)SDL_DestroyTexture(letter_timing[i]);
 	bmsm.reset();
-	qr.close();
+	//qr.close();
 	TTF_CloseFont(font);
 	TTF_Quit();
 }

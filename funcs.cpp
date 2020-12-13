@@ -42,34 +42,46 @@ void Timer::close(){
 
 //QR_Reader
 int QR_Reader::init(string curr_dir) {
+	lock_guard<mutex> lg(m);
 	zbar = _popen((curr_dir+"\\zbarcam").c_str(), "r");
-	inited = true;
+	_inited = true;
 	return 0;
 }
 void QR_Reader::read_start(){
+	m.lock();
 	timer.start();
 	timer.set_frametime(2000);
-	reading = true;
+	_reading = true;
+	m.unlock();
 	auto th = thread([this] {
 		while (1) {
 			timer.sleep();
-			if (!inited || read)continue;
+			if (flg_break()) {
+				flg_break(false);
+				break;
+			}
+			if (!inited() || read()) continue;
+			m.lock();
 			fgets(buff, sizeof(buff), zbar);
 			tmp_str = string(buff);
 			if (tmp_str==""||tmp_str.find("https://") == string::npos || tmp_str.compare(tmp_str.size() - 4, 4, userid) == 0)continue;
 			userid = tmp_str.substr(tmp_str.size() - 5, 4);
-			read = true;
+			_read = true;
+			m.unlock();
 			break;
 		}
 	});
 	th.detach();
 }
 void QR_Reader::reset(){
+	lock_guard<mutex> lg(m);
 	userid = "";
-	read = false;
+	_read = false;
+	_flg_break = true;
 	return;
 }
 int QR_Reader::send(int rank,int song,int score){
+	lock_guard<mutex> lg(m);
 	curl = curl_easy_init();
 	string chunk,url,post_data;
 	url = "http://tk67ennichi.official.jp/enpass/database.php";
@@ -81,8 +93,8 @@ int QR_Reader::send(int rank,int song,int score){
 		curl_easy_setopt(curl, CURLOPT_POST, 1);
 		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post_data.c_str());
 		curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, post_data.size());
-		curl_easy_setopt(curl, CURLOPT_WRITEDATA, &data);
-		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, callback_send);
+		//curl_easy_setopt(curl, CURLOPT_WRITEDATA, &data);
+		//curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, callback_send);
 		curl_easy_setopt(curl, CURLOPT_PROXY, "");
 		res = curl_easy_perform(curl);
 		curl_easy_cleanup(curl);
@@ -95,7 +107,8 @@ int QR_Reader::send(int rank,int song,int score){
 size_t QR_Reader::callback_send(char* ptr, size_t size, size_t nmemb, bool* stream) {
 	return size * nmemb;
 }
-void QR_Reader::check_hidden(bool hidden[2]) {
+void QR_Reader::check_hidden(bool *hidden) {
+	lock_guard<mutex> lg(m);
 	curl = curl_easy_init();
 	string chunk, url,post_data;
 	url = "http://tk67ennichi.official.jp/enpass/database.php";
@@ -108,7 +121,7 @@ void QR_Reader::check_hidden(bool hidden[2]) {
 		curl_easy_setopt(curl, CURLOPT_POST, 1);
 		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post_data.c_str());
 		curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, post_data.size());
-		curl_easy_setopt(curl, CURLOPT_WRITEDATA, &hidden[0]);
+		curl_easy_setopt(curl, CURLOPT_WRITEDATA, hidden);
 		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, callback);
 		curl_easy_setopt(curl, CURLOPT_PROXY, "");
 		res = curl_easy_perform(curl);
