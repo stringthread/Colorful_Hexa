@@ -278,7 +278,7 @@ int BMS_Manager::Header::load(string dir,string file,bool is_first,SDL_Renderer*
 				notesdesigner = data;
 				break;
 			case 11:
-				//bgm = Mix_LoadMUS((dir + data).c_str());
+				//bgm.init(dir + data);
 				break;
 			}
 		}
@@ -370,7 +370,7 @@ int BMS_Manager::load_music(SDL_Renderer *render){
 			bmp[line.substr(4,2)].init(regex_replace(line, regex("#BMP[0-9]{2}[ \t]+"), ""));
 		}
 		if (regex_search(line, regex("^#WAV[0-9]{2}"))) {
-			wav[line.substr(4, 2)] = Mix_LoadMUS((header[sel].dir+regex_replace(line, regex("#WAV[0-9]{2}[ \t]+"), "")).c_str());
+			wav[line.substr(4, 2)].init(header[sel].dir+regex_replace(line, regex("#WAV[0-9]{2}[ \t]+"), ""));
 			if (wav[line.substr(4, 2)] == nullptr) {
 				SDL_Log(Mix_GetError());
 			}
@@ -446,7 +446,6 @@ void BMS_Manager::reset() {
 	}
 	for (auto itr = wav.begin(), end = wav.end(); itr != end; ++itr) {
 		Mix_FreeMusic(itr->second);
-		itr->second = NULL;
 	}
 	wav.clear();
 	for (auto itr = bmp.begin(), end = bmp.end(); itr != end; ++itr) {
@@ -592,6 +591,22 @@ void Text_Draw::close() {
 	SDL_DestroyTexture(tex);
 }
 
+Safe_Queue<pair<Lazy_Load*, function<void()>>> Lazy_Load::que(make_pair(nullptr, nullptr));
+pair<Lazy_Load*, function<void()>> Lazy_Load::tmp;
+void Lazy_Load::load_queue(SDL_Renderer *render) {
+	while (!que.empty()) {
+		tmp = que.pop();
+		if (tmp.first->is_free()) continue;
+		tmp.first->load(render);
+		if (tmp.second) {
+			tmp.second();
+		}
+	}
+}
+void Lazy_Load::push_queue(Lazy_Load* lt, function<void()> callback) {
+	que.push(make_pair(lt, callback));
+}
+
 void Lazy_Texture::init(string path, function<void()> callback) {
 	free();
 	surface = IMG_Load(path.c_str());
@@ -607,10 +622,10 @@ void Lazy_Texture::init(string path, bool flg_queue) {
 void Lazy_Texture::init(const string path, SDL_Renderer *render) {
 	free();
 	surface = IMG_Load(path.c_str());
-	texturelize(render);
+	load(render);
 	return;
 }
-void Lazy_Texture::texturelize(SDL_Renderer *render) {
+void Lazy_Texture::load(SDL_Renderer *render) {
 	if (tex != NULL) SDL_DestroyTexture(tex);
 	tex = SDL_CreateTextureFromSurface(render, surface);
 	if (tex != NULL) SDL_FreeSurface(surface);
@@ -632,20 +647,53 @@ void Lazy_Texture::free() {
 	SDL_DestroyTexture(tex);
 	tex = nullptr;
 }
-Safe_Queue<pair<Lazy_Texture*,function<void()>>> Lazy_Texture::que(make_pair(nullptr, nullptr));
-pair<Lazy_Texture*, function<void()>> Lazy_Texture::tmp;
-void Lazy_Texture::texturelize_queue(SDL_Renderer *render) {
-	while (!que.empty()) {
-		tmp=que.pop();
-		if (tmp.first->is_free()) continue;
-		tmp.first->texturelize(render);
-		if (tmp.second) {
-			tmp.second();
-		}
-	}
+
+void Lazy_Music::init(string path, function<void()> callback) {
+	free();
+	this->path = path;
+	push_queue(this, callback);
+	return;
 }
-void Lazy_Texture::push_queue(Lazy_Texture* lt, function<void()> callback) {
-	que.push(make_pair(lt,callback));
+void Lazy_Music::init(string path, bool flg_queue) {
+	free();
+	this->path = path;
+	if (flg_queue) push_queue(this);
+	return;
+}
+void Lazy_Music::load(SDL_Renderer *render) {
+	if (music != NULL)Mix_FreeMusic(music);
+	music = Mix_LoadMUS(path.c_str());
+	return;
+}
+void Lazy_Music::free() {
+	Mix_FreeMusic(music);
+	music = nullptr;
+	path = "";
+	return;
+}
+
+void Lazy_Chunk::init(string path, function<void()> callback) {
+	free();
+	this->path = path;
+	push_queue(this, callback);
+	return;
+}
+void Lazy_Chunk::init(string path, bool flg_queue) {
+	free();
+	this->path = path;
+	if (flg_queue) push_queue(this);
+	return;
+}
+void Lazy_Chunk::load(SDL_Renderer *render) {
+	if (chunk != NULL)Mix_FreeChunk(chunk);
+	chunk = Mix_LoadWAV(path.c_str());
+	return;
+}
+void Lazy_Chunk::free() {
+	Mix_FreeChunk(chunk);
+	chunk = nullptr;
+	path = "";
+	return;
 }
 
 //algorithms

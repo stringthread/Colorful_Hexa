@@ -23,6 +23,7 @@ void Gamemain::change_mode() {
 			t_load.detach();
 			step_choose = 0;
 			Mix_HaltMusic();
+			n_bg.set_n(0);
 			mode = M_LOADING;
 			break;
 		case M_LOADING:
@@ -52,6 +53,7 @@ void Gamemain::change_mode() {
 			colorful_gauge = 0.0f;
 			curr_judge = -1;
 			Mix_PlayMusic(bgm_title, -1);
+			n_bg.set_n(6);
 			mode = M_TITLE;
 			break;
 	}
@@ -437,6 +439,7 @@ int Gamemain::play(){
 	SDL_FreeSurface(s_letter);
 	SDL_RenderCopy(render,letter, NULL, &rect_combo);
 	SDL_DestroyTexture(letter);
+	n_bg.set_n((int)colorful_gauge);
 	//draw play screen
 	return 0;
 }
@@ -524,6 +527,7 @@ void Gamemain::init_sync(){
 
 	bg_1.init(render, (string(curr_dir) + "\\data\\bg_1.png").c_str());
 	bg_2.init(render, (string(curr_dir) + "\\data\\bg_2.png").c_str());
+	n_bg.init(render, (string(curr_dir)+"\\data").c_str());
 	//loading
 }
 
@@ -638,7 +642,7 @@ void Gamemain::init(){
 
 	bmsm.init(render, curr_dir);
 
-	bgm_ready = Mix_LoadWAV((curr_dir + "\\data\\bgm_ready.wav").c_str());
+	bgm_ready.init(curr_dir + "\\data\\bgm_ready.wav");
 
 	Mix_AllocateChannels(72);
 	Mix_GroupChannels(0, 1, 0);
@@ -651,8 +655,8 @@ void Gamemain::init(){
 	Mix_GroupChannels(12, 61, 6);
 	Mix_GroupChannels(62, 71, 7);//for long sound
 	//group for bgm
-	bgm_title = Mix_LoadMUS((curr_dir + "\\data\\bgm_title.wav").c_str());
-	bgm_result = Mix_LoadMUS((curr_dir + "\\data\\bgm_result.wav").c_str());
+	bgm_title.init(curr_dir + "\\data\\bgm_title.wav");
+	bgm_result.init(curr_dir + "\\data\\bgm_result.wav");
 	//mixer
 
 	ifstream ifs(curr_dir + "\\data\\config.txt");
@@ -661,10 +665,9 @@ void Gamemain::init(){
 		if (line.find("latency")!=0&& line.find("vol") != 0)continue;
 		if (line.find("latency1:") == 0)latency1 = stol(line.substr(9));
 		if (line.find("latency2:") == 0)latency2 = stol(line.substr(9));
-		/*if (line.find("vol:") == 0) {
-			vol = stoi(line.substr(4));
-			Mix_Volume(-1, vol);
-		}*/
+		if (line.find("vol:") == 0) {
+			set_vol(stoi(line.substr(4)));
+		}
 	}
 	ifs.close();
 	//config.txt
@@ -728,10 +731,16 @@ int Gamemain::loop() {//quit when you don't return 0
 	}
 	//get button input(u,j,n,b,g,y->input[0]~input[5])
 
+	if (vol() >= 0) {
+		Mix_Volume(-1, vol());
+		Mix_VolumeMusic(vol());
+		set_vol(-1);
+	}
 	SDL_SetRenderDrawColor(render, 0x33, 0x33, 0x33, SDL_ALPHA_OPAQUE);
 	SDL_RenderClear(render);
 	bg_1.draw();
 	bg_2.draw();
+	n_bg.draw();
 	SDL_RenderCopy(render, border, NULL, NULL);
 
 	if (is_init_comp()) {
