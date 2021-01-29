@@ -423,6 +423,10 @@ int Gamemain::play(){
 		}
 		if (i == 6)continue;
 		SDL_RenderCopy(render,(input[i] > 0) ? btn_p[i] : btn[i], NULL,  &rect_btn[i]);
+		pe_btn[i].set_tex_id(((colors == 6) ? i : colors)+1);
+		if (input[i] == 1)pe_btn[i].start(120, -1, 6);
+		else if (input[i] == -1)pe_btn[i].stop();
+		pe_btn[i].draw();
 		if(colorful_gauge>=i+1)SDL_RenderCopy(render, btn_col[i], NULL, &rect_btn[i]);
 	}
 
@@ -599,6 +603,7 @@ void Gamemain::init(){
 		rect_title_logo.y = scr_h * 0.55f - rect_title_logo.h / 2;
 	});
 	bar_line.init((string(curr_dir) + "\\data\\bar_line.png"));
+	ParticleEmitter::load(string(curr_dir));
 	for (int i= 0; i < 6; i++) {
 		btn[i].init((string(curr_dir) + "\\data\\btn_" + to_string(i)+".png"));
 		btn_p[i].init((string(curr_dir) + "\\data\\btn_p_" + to_string(i)+".png"));
@@ -611,6 +616,10 @@ void Gamemain::init(){
 			});
 			else ln[i][j].init((string(curr_dir) + "\\data\\ln_" + to_string(i) + "_" + to_string(j) + ".png"));
 		}
+		pe_btn[i].init(render, 0,
+					   scr_w*(0.5f+0.15f*sinf(pi/3*i)), scr_h*(0.5f - 0.15f*cosf(pi / 3 * i)),
+					   scr_w*(0.5f + 0.15f*sinf(pi / 3 * (i+1))), scr_h*(0.5f - 0.15f*cosf(pi / 3 * (i+1))),
+					   60 * (1 - i), 5, 5);
 	}
 	note[6].init((string(curr_dir) + "\\data\\ln_end.png"));
 
@@ -765,6 +774,7 @@ void Gamemain::close(){
 	}
 	for (int i = 0; i < 4; i++)SDL_DestroyTexture(letter_judge[i]);
 	for (int i = 0; i < 3; i++)SDL_DestroyTexture(letter_timing[i]);
+	ParticleEmitter::destroy_texture();
 	bmsm.reset();
 	//qr.close();
 	TTF_CloseFont(font);

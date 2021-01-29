@@ -696,6 +696,53 @@ void Lazy_Chunk::free() {
 	return;
 }
 
+Lazy_Texture ParticleEmitter::tex[7];
+void ParticleEmitter::load(string path) {
+	for (int i = 0; i < 7; i++) {
+		tex[i].init(path + "\\data\\particle_" + to_string(i) + ".png");
+	}
+}
+void ParticleEmitter::destroy_texture() {
+	for (int i = 0; i < 7; i++) {
+		tex[i].free();
+	}
+}
+void ParticleEmitter::init(SDL_Renderer *render,int tex_id, int x1, int y1, int x2, int y2, float angle, int r, float v) {
+	this->render = render;
+	this->tex_id = tex_id;
+	end_1.x = x1; end_1.y = y1;
+	end_2.x = x2; end_2.y = y2;
+	this->angle = angle;
+	this->r = r;
+	this->v = v;
+}
+void ParticleEmitter::start(int freq, int life, int p_life) {
+	reset();
+	this->freq = freq;
+	this->life = life;
+	this->p_life = p_life;
+}
+void ParticleEmitter::draw() {
+	while (!particles.empty()&&particles.front()->is_dead()) particles.pop_front();
+	if (life < 0 || ctr < life) {
+		ctr++;
+		int n = freq / 60 + ((freq % 60!= 0&& ctr % (60 / (freq % 60))==0)?1:0);
+		float rn;
+		for (int i = 0; i < n;i++) {
+			rn = (float)rand() / (float)RAND_MAX;
+			particles.push_back(make_unique<Particle>(tex_id, p_life, (1 - rn)*end_1.x + rn * end_2.x, (1 - rn)*end_1.y + rn * end_2.y, r*(0.9f+0.2f*(float)rand() / (float)RAND_MAX), v*(0.5f + (float)rand() / (float)RAND_MAX), angle + 15 * (1 - 2 * rn)));
+		}
+	}
+	if (particles.empty()) return;
+	for (auto it = particles.begin(); it != particles.end(); it++) {
+		(*it)->draw(render);
+	}
+}
+void ParticleEmitter::reset() {
+	particles.clear();
+	ctr = 0;
+}
+
 //algorithms
 int min_l(initializer_list<int> args) {
 	int min = INT_MAX;
