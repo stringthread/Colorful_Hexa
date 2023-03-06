@@ -730,7 +730,7 @@ void ParticleEmitter::draw() {
 		float rn;
 		for (int i = 0; i < n;i++) {
 			rn = (float)rand() / (float)RAND_MAX;
-			particles.push_back(make_unique<Particle>(tex_id, p_life, (1 - rn)*end_1.x + rn * end_2.x, (1 - rn)*end_1.y + rn * end_2.y, r*(0.9f+0.2f*(float)rand() / (float)RAND_MAX), v*(0.5f + (float)rand() / (float)RAND_MAX), angle + 15 * (1 - 2 * rn)));
+			particles.push_back(make_unique<Particle>(tex_id, p_life, (1 - rn)*end_1.x + rn * end_2.x, (1 - rn)*end_1.y + rn * end_2.y, r*2*(0.9f+0.2f*(float)rand() / (float)RAND_MAX), v*(0.5f + (float)rand() / (float)RAND_MAX), angle + 15 * (1 - 2 * rn)));
 		}
 	}
 	if (particles.empty()) return;
