@@ -42,8 +42,6 @@ void Gamemain::change_mode() {
 			Mix_HaltChannel(-1);
 			Mix_HaltMusic();
 			bmsm.reset();
-			/*qr.reset();
-			qr.read_start();*/
 			pushing_long.fill(0);
 			judge.fill(0);
 			score = 0;
@@ -197,12 +195,7 @@ string Gamemain::digit(float data, int n) {
 
 int Gamemain::title(){
 	if (bmsm.get_header_loaded()) {
-		/*if (!qr.inited()) {
-			auto th = thread([this]{ qr.init(curr_dir); });
-			th.detach();
-		} else if (!qr.reading() && !qr.read())qr.read_start();*/
-		if (any_pressed()/* || qr.read()*/) {
-			/*if (qr.read())qr.check_hidden(&bmsm.hidden[0]);*/
+		if (any_pressed()) {
 			change_mode();
 		}
 		SDL_RenderCopyAlpha(render, title_logo, NULL, &rect_title_logo, 180 + 75 * cos(0.001*timer->get_time()));
@@ -280,7 +273,8 @@ int Gamemain::choose(){
 		cap_speed.draw();
 		s_letter = TTF_RenderUTF8_Blended(font, digit(bmsm.get_speed(), 2).c_str(), f_color);
 		letter = SDL_CreateTextureFromSurface(render, s_letter);
-		SDL_FreeSurface(s_letter);
+		if(s_letter!=NULL)SDL_FreeSurface(s_letter);
+		s_letter = nullptr;
 		rect_center.w = rect_center.h*1.5f;
 		rect_center.x = (scr_w - rect_center.w) / 2;
 		SDL_RenderCopy(render, letter, NULL, &rect_center);
@@ -435,12 +429,14 @@ int Gamemain::play(){
 
 	s_letter = TTF_RenderUTF8_Blended(font, digit((int)score, 6).c_str(), f_color);
 	letter = SDL_CreateTextureFromSurface(render, s_letter);
-	SDL_FreeSurface(s_letter);
+	if (s_letter != NULL) SDL_FreeSurface(s_letter);
+	s_letter = nullptr;
 	SDL_RenderCopy(render,letter, NULL, &rect_score);
 	SDL_DestroyTexture(letter);
 	s_letter = TTF_RenderUTF8_Blended(font, digit((int)combo,3).c_str(), f_color);
 	letter = SDL_CreateTextureFromSurface(render, s_letter);
-	SDL_FreeSurface(s_letter);
+	if(s_letter!=NULL) SDL_FreeSurface(s_letter);
+	s_letter = nullptr;
 	SDL_RenderCopy(render,letter, NULL, &rect_combo);
 	SDL_DestroyTexture(letter);
 	n_bg.set_n((int)colorful_gauge);
@@ -450,10 +446,6 @@ int Gamemain::play(){
 
 int Gamemain::result(){
 	if (any_pressed())change_mode();
-	/*if (qr.read()) {
-		qr.send(bmsm.get_lv(),bmsm.get_sel(),score);
-		qr.reset();
-	}*/
 	for (rank = 0; rank < 9;) {
 		if (score >= range_rank[rank])break;
 		else rank++;
@@ -461,18 +453,21 @@ int Gamemain::result(){
 
 	s_letter = TTF_RenderUTF8_Blended(font, ("Lv."+digit((int)bmsm.get_playlevel(), 2)).c_str(), f_color);
 	letter = SDL_CreateTextureFromSurface(render, s_letter);
-	SDL_FreeSurface(s_letter);
+	if (s_letter != NULL)SDL_FreeSurface(s_letter);
+	s_letter = nullptr;
 	SDL_RenderCopy(render, letter, NULL, &rect_score);
 	SDL_DestroyTexture(letter);
 	s_letter = TTF_RenderUTF8_Blended(font, text_lv[bmsm.get_lv()].c_str(), f_color);
 	letter = SDL_CreateTextureFromSurface(render, s_letter);
-	SDL_FreeSurface(s_letter);
+	if (s_letter != NULL)SDL_FreeSurface(s_letter);
+	s_letter = nullptr;
 	SDL_RenderCopy(render, letter, NULL, &rect_lv_res);
 	SDL_DestroyTexture(letter);
 	letter_title.draw();
 	s_letter = TTF_RenderUTF8_Blended(font, ("Score: "+digit((int)score,6)).c_str(), f_color);
 	letter = SDL_CreateTextureFromSurface(render, s_letter);
-	SDL_FreeSurface(s_letter);
+	if (s_letter != NULL)SDL_FreeSurface(s_letter);
+	s_letter = nullptr;
 	SDL_QueryTexture(letter, NULL, NULL, &tex_w, &tex_h);
 	rect_res_score.w = rect_res_score.h*tex_w / tex_h;
 	rect_res_score.x = (scr_w - rect_res_score.w) / 2;
@@ -481,7 +476,8 @@ int Gamemain::result(){
 	SDL_RenderCopy(render, letter_rank[rank], NULL, &rect_rank);
 	s_letter = TTF_RenderUTF8_Blended(font, ("Max Combo: " + digit((int)max_combo, 3)).c_str(), f_color);
 	letter = SDL_CreateTextureFromSurface(render, s_letter);
-	SDL_FreeSurface(s_letter);
+	if (s_letter != NULL)SDL_FreeSurface(s_letter);
+	s_letter = nullptr;
 	SDL_QueryTexture(letter, NULL, NULL, &tex_w, &tex_h);
 	rect_res_combo.w = rect_res_combo.h*tex_w / tex_h;
 	rect_res_combo.x = (scr_w - rect_res_combo.w) / 2;
@@ -489,7 +485,8 @@ int Gamemain::result(){
 	SDL_DestroyTexture(letter);
 	s_letter = TTF_RenderUTF8_Blended(font, ("Perfect: " + digit((int)judge[0], 3)).c_str(), f_color);
 	letter = SDL_CreateTextureFromSurface(render, s_letter);
-	SDL_FreeSurface(s_letter);
+	if (s_letter != NULL)SDL_FreeSurface(s_letter);
+	s_letter = nullptr;
 	SDL_QueryTexture(letter, NULL, NULL, &tex_w, &tex_h);
 	rect_perfect.w = rect_perfect.h*tex_w / tex_h;
 	rect_perfect.x = (scr_w - rect_perfect.w) / 2;
@@ -497,7 +494,8 @@ int Gamemain::result(){
 	SDL_DestroyTexture(letter);
 	s_letter = TTF_RenderUTF8_Blended(font, ("Great: " + digit((int)judge[1], 3)).c_str(), f_color);
 	letter = SDL_CreateTextureFromSurface(render, s_letter);
-	SDL_FreeSurface(s_letter);
+	if (s_letter != NULL)SDL_FreeSurface(s_letter);
+	s_letter = nullptr;
 	SDL_QueryTexture(letter, NULL, NULL, &tex_w, &tex_h);
 	rect_great.w = rect_great.h*tex_w / tex_h;
 	rect_great.x = (scr_w - rect_great.w) / 2;
@@ -505,7 +503,8 @@ int Gamemain::result(){
 	SDL_DestroyTexture(letter);
 	s_letter = TTF_RenderUTF8_Blended(font, ("Good: " + digit((int)judge[2], 3)).c_str(), f_color);
 	letter = SDL_CreateTextureFromSurface(render, s_letter);
-	SDL_FreeSurface(s_letter);
+	if (s_letter != NULL)SDL_FreeSurface(s_letter);
+	s_letter = nullptr;
 	SDL_QueryTexture(letter, NULL, NULL, &tex_w, &tex_h);
 	rect_good.w = rect_good.h*tex_w / tex_h;
 	rect_good.x = (scr_w - rect_good.w) / 2;
@@ -513,7 +512,8 @@ int Gamemain::result(){
 	SDL_DestroyTexture(letter);
 	s_letter = TTF_RenderUTF8_Blended(font, ("Miss: " + digit((int)judge[3], 3)).c_str(), f_color);
 	letter = SDL_CreateTextureFromSurface(render, s_letter);
-	SDL_FreeSurface(s_letter);
+	if (s_letter != NULL)SDL_FreeSurface(s_letter);
+	s_letter = nullptr;
 	SDL_QueryTexture(letter, NULL, NULL, &tex_w, &tex_h);
 	rect_miss.w = rect_miss.h*tex_w / tex_h;
 	rect_miss.x = (scr_w - rect_miss.w) / 2;
@@ -696,9 +696,6 @@ void Gamemain::init(){
 	cap_speed.set_center("Speed", scr_w / 2, int(scr_h*0.2f), int(scr_h*0.1f), f_color);
 	notesdesigner.set_text(bmsm.get_notesdesigner());
 
-	//qr.userid = "16a9";
-	//qr.send(2, 0, 120000);
-
 	set_is_init_comp();
 	SDL_Log("gamemain.init() end.");
 	//timer->start();
@@ -776,7 +773,6 @@ void Gamemain::close(){
 	for (int i = 0; i < 3; i++)SDL_DestroyTexture(letter_timing[i]);
 	ParticleEmitter::destroy_texture();
 	bmsm.reset();
-	//qr.close();
 	TTF_CloseFont(font);
 	TTF_Quit();
 }

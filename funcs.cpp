@@ -40,112 +40,6 @@ void Timer::close(){
 	timeEndPeriod(1);
 }
 
-//QR_Reader
-int QR_Reader::init(string curr_dir) {
-	lock_guard<mutex> lg(m);
-	zbar = _popen((curr_dir+"\\zbarcam").c_str(), "r");
-	_inited = true;
-	return 0;
-}
-void QR_Reader::read_start(){
-	m.lock();
-	timer.start();
-	timer.set_frametime(2000);
-	_reading = true;
-	m.unlock();
-	auto th = thread([this] {
-		while (1) {
-			timer.sleep();
-			if (flg_break()) {
-				flg_break(false);
-				break;
-			}
-			if (!inited() || read()) continue;
-			m.lock();
-			fgets(buff, sizeof(buff), zbar);
-			tmp_str = string(buff);
-			if (tmp_str==""||tmp_str.find("https://") == string::npos || tmp_str.compare(tmp_str.size() - 4, 4, userid) == 0)continue;
-			userid = tmp_str.substr(tmp_str.size() - 5, 4);
-			_read = true;
-			m.unlock();
-			break;
-		}
-	});
-	th.detach();
-}
-void QR_Reader::reset(){
-	lock_guard<mutex> lg(m);
-	userid = "";
-	_read = false;
-	_flg_break = true;
-	return;
-}
-int QR_Reader::send(int rank,int song,int score){
-	lock_guard<mutex> lg(m);
-	curl = curl_easy_init();
-	string chunk,url,post_data;
-	url = "http://tk67ennichi.official.jp/enpass/database.php";
-	post_data = "mode='set'&id='"+userid+"'&password='torisasamiyukke'&attrac='colorfulhexa'&score_mode="+to_string(rank)+"&song="+to_string(song)+"&score="+to_string(score);
-	//url = "http://localhost/test/test.php";
-	//post_data = "test=qwerty";
-	if (curl){
-		curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-		curl_easy_setopt(curl, CURLOPT_POST, 1);
-		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post_data.c_str());
-		curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, post_data.size());
-		//curl_easy_setopt(curl, CURLOPT_WRITEDATA, &data);
-		//curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, callback_send);
-		curl_easy_setopt(curl, CURLOPT_PROXY, "");
-		res = curl_easy_perform(curl);
-		curl_easy_cleanup(curl);
-	}
-	if (res != CURLE_OK) {
-		return -1;
-	}
-	return 0;
-}
-size_t QR_Reader::callback_send(char* ptr, size_t size, size_t nmemb, bool* stream) {
-	return size * nmemb;
-}
-void QR_Reader::check_hidden(bool *hidden) {
-	lock_guard<mutex> lg(m);
-	curl = curl_easy_init();
-	string chunk, url,post_data;
-	url = "http://tk67ennichi.official.jp/enpass/database.php";
-	post_data = "mode=special_song&id="+userid;
-	//url = "http://localhost/test/test.php";
-	//post_data = "test=qwerty";
-	if (curl)
-	{
-		curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-		curl_easy_setopt(curl, CURLOPT_POST, 1);
-		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post_data.c_str());
-		curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, post_data.size());
-		curl_easy_setopt(curl, CURLOPT_WRITEDATA, hidden);
-		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, callback);
-		curl_easy_setopt(curl, CURLOPT_PROXY, "");
-		res = curl_easy_perform(curl);
-		curl_easy_cleanup(curl);
-	}
-	if (res != CURLE_OK) {
-		err_count++;
-		if (err_count < 5)check_hidden(hidden);
-		else err_count = 0;
-		return;
-	}
-	err_count = 0;
-	return;
-}
-size_t QR_Reader::callback(char* ptr, size_t size, size_t nmemb, bool* stream){
-	string ret = string(ptr);
-	stream[0] = (ret == "2" || ret == "3");
-	stream[1] = (ret == "1" || ret == "3");
-	return size*nmemb;
-}
-void QR_Reader::close(){
-	_pclose(zbar);
-}
-
 //BMS_Manager
 //BMS_Manager::BMS_Manager(SDL_Renderer* render) {
 void BMS_Manager::init(SDL_Renderer* render, string curr_dir){
@@ -506,7 +400,8 @@ void Letter_Scroll::init(SDL_Renderer *a_render, TTF_Font *a_font, SDL_Color a_c
 	SDL_Surface *sur;
 	sur = TTF_RenderUTF8_Blended(font, str.c_str(), color);
 	tex = SDL_CreateTextureFromSurface(render, sur);
-	SDL_FreeSurface(sur);
+	if(sur!=NULL)SDL_FreeSurface(sur);
+	sur = nullptr;
 	SDL_QueryTexture(tex, NULL, NULL, &tex_w, &tex_h);
 	src.h = tex_h;
 	src.w = min(tex_w, tex_h*dst.w / dst.h);
@@ -524,7 +419,8 @@ void Letter_Scroll::set_text(string a_str,SDL_Color *a_color) {
 	if(a_color!=NULL)color = *a_color;
 	sur = TTF_RenderUTF8_Blended(font, str.c_str(), color);
 	tex = SDL_CreateTextureFromSurface(render, sur);
-	SDL_FreeSurface(sur);
+	if (sur != NULL)SDL_FreeSurface(sur);
+	sur = nullptr;
 	SDL_QueryTexture(tex, NULL, NULL, &tex_w, &tex_h);
 	dst = org_dst;
 	dst_w = dst.w;
@@ -563,7 +459,8 @@ void Text_Draw::set_left(string a_text, int x, int y, unsigned int h,const SDL_C
 	text = a_text;
 	sur = TTF_RenderUTF8_Blended(font, text.c_str(), col);
 	tex = SDL_CreateTextureFromSurface(render,sur);
-	SDL_FreeSurface(sur);
+	if(sur!=NULL)SDL_FreeSurface(sur);
+	sur = nullptr;
 	int tex_w, tex_h;
 	SDL_QueryTexture(tex, NULL, NULL, &tex_w, &tex_h);
 	rect.x = x;
@@ -576,7 +473,8 @@ void Text_Draw::set_center(string a_text, int x_cen, int y_cen, unsigned int h, 
 	text = a_text;
 	sur = TTF_RenderUTF8_Blended(font, text.c_str(), col);
 	tex = SDL_CreateTextureFromSurface(render, sur);
-	SDL_FreeSurface(sur);
+	if (sur != NULL)SDL_FreeSurface(sur);
+	sur = nullptr;
 	int tex_w, tex_h;
 	SDL_QueryTexture(tex, NULL, NULL, &tex_w, &tex_h);
 	rect.h = h;
@@ -628,7 +526,8 @@ void Lazy_Texture::init(const string path, SDL_Renderer *render) {
 void Lazy_Texture::load(SDL_Renderer *render) {
 	if (tex != NULL) SDL_DestroyTexture(tex);
 	tex = SDL_CreateTextureFromSurface(render, surface);
-	if (tex != NULL) SDL_FreeSurface(surface);
+	if (tex != NULL&&surface!=NULL) SDL_FreeSurface(surface);
+	surface = nullptr;
 	return;
 }
 void Lazy_Texture::set_surface(SDL_Surface *arg_surface) {
