@@ -765,6 +765,7 @@ int Gamemain::loop() {//quit when you don't return 0
 }
 
 void Gamemain::close(){
+	Mix_HaltMusic();
 	for (int i = 0; i < 6; i++) {
 		SDL_DestroyTexture(btn[i]);
 		SDL_DestroyTexture(btn_p[i]);
