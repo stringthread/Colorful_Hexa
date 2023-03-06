@@ -1,3 +1,10 @@
 /Debug/
 /Release/
+/x64/Debug
+/x64/Release
 *.vcxproj*
+*.lib
+*.dll
+/opencv2/
+/curl/
+/zbar/

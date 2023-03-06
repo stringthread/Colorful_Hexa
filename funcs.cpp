@@ -278,7 +278,7 @@ int BMS_Manager::Header::load(string dir,string file,bool is_first,SDL_Renderer*
 				notesdesigner = data;
 				break;
 			case 11:
-				//bgm.init(dir + data);
+				bgm.init(dir + data);
 				break;
 			}
 		}
@@ -642,7 +642,7 @@ void Lazy_Texture::set_texture(SDL_Texture *arg_tex) {
 	return;
 }
 void Lazy_Texture::free() {
-	SDL_FreeSurface(surface);
+	if (surface != NULL) SDL_FreeSurface(surface);
 	surface = nullptr;
 	SDL_DestroyTexture(tex);
 	tex = nullptr;

@@ -8,13 +8,13 @@
 void Gamemain::change_mode() {
 	switch (mode) {
 		case M_STANDBY:
-			//Mix_HaltMusic();
+			Mix_HaltMusic();
 			Mix_PlayMusic(bgm_title, -1);
 			mode = M_TITLE;
 			break;
 		case M_TITLE:
-			//Mix_HaltMusic();
-			//bmsm.play_bgm();
+			Mix_HaltMusic();
+			bmsm.play_bgm();
 			letter_title.set_text(bmsm.get_title(), &f_color);
 			mode = M_CHOOSE;
 			break;
@@ -242,8 +242,8 @@ int Gamemain::choose(){
 			lv_normal.set_center(to_string(bmsm.get_playlevel(1)), p_lv_normal.x, p_lv_normal.y, scr_h*0.08f, f_color);
 			lv_hard.set_center(to_string(bmsm.get_playlevel(2)), p_lv_hard.x, p_lv_hard.y, scr_h*0.08f, f_color);
 			notesdesigner.set_text(bmsm.get_notesdesigner());
-			//Mix_HaltMusic();
-			//bmsm.play_bgm();
+			Mix_HaltMusic();
+			bmsm.play_bgm();
 		}
 		if (input[4] == 1 || (input[4] >= 60 && (input[4] - 60) % 20 == 0)) {
 			bmsm.change_sel(-1);
@@ -253,8 +253,8 @@ int Gamemain::choose(){
 			lv_normal.set_center(to_string(bmsm.get_playlevel(1)), p_lv_normal.x, p_lv_normal.y, scr_h*0.08f, f_color);
 			lv_hard.set_center(to_string(bmsm.get_playlevel(2)), p_lv_hard.x, p_lv_hard.y, scr_h*0.08f, f_color);
 			notesdesigner.set_text(bmsm.get_notesdesigner());
-			//Mix_HaltMusic();
-			//bmsm.play_bgm();
+			Mix_HaltMusic();
+			bmsm.play_bgm();
 		}
 	}else if(step_choose==1){
 		if (input[2] == -1 || input[3] == -1)step_choose--;
